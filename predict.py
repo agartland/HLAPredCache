@@ -9,10 +9,11 @@ import os
 try:
     import mhc_bindings.mhc_bindings as mb
 except ImportError:
-    mb=None
+    mb = None
 
 __all__ = ['iedbPrediction',
            'predictHLABinding']
+
 def iedbPrediction():
     pass
 
@@ -21,31 +22,31 @@ def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumb
     columns: method, hla, peptide, core, missing"""
 
     """Ensure that hlas and peptides are unique"""
-    hlas=list(set(hlas))
-    peptides=list(set(peptides))
+    hlas = list(set(hlas))
+    peptides = list(set(peptides))
 
     if verbose:
         print 'Predicting %d mers with %d HLAs...' % (len(peptides),len(hlas)),
     """Run all predictions and add results to the cache"""
     if not (useTempFiles or dumbledore):
-        results=mb.fetch_return(methods=[method],
-                                mhc_strs=hlas,
-                                peptide_strs=peptides,
-                                peptide_length=len(peptides[0]),
-                                force=force,
-                                query=query,
-                                verb=verbose,
-                                no_cache=no_cache,
-                                cpus=cpus,
-                                db_passwd='R1ghtN0w',login='agartlan')
+        results = mb.fetch_return(methods = [method],
+                                mhc_strs = hlas,
+                                peptide_strs = peptides,
+                                peptide_length = len(peptides[0]),
+                                force = force,
+                                query = query,
+                                verb = verbose,
+                                no_cache = no_cache,
+                                cpus = cpus,
+                                db_passwd = 'R1ghtN0w',login='agartlan')
         """Add the missing field"""
         #results=[(m,h,pep,c,pred,False) for m,h,pep,c,pred in results]
 
-        resDf=pd.DataFrame(results,columns=['method','hla','peptide','core','pred'])
+        resDf = pd.DataFrame(results, columns = ['method','hla','peptide','core','pred'])
     else:
         """Write peptides to a tempfile"""
-        with NamedTemporaryFile(delete=False,mode='w',prefix='agtmp',suffix='.mers') as pepFh:
-            pepFn=pepFh.name
+        with NamedTemporaryFile(delete=False, mode='w', prefix='agtmp', suffix='.mers') as pepFh:
+            pepFn = pepFh.name
             for pep in peptides:
                 pepFh.write('%s\n' % pep)
 
@@ -117,14 +118,14 @@ def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumb
         os.unlink(hlaFn)
         os.unlink(outFn)
 
-    expectedN=len(hlas)*len(peptides)
-    actN=resDf.shape[0]
-    if actN==expectedN:
+    expectedN = len(hlas)*len(peptides)
+    actN = resDf.shape[0]
+    if actN == expectedN:
         if verbose:
             print 'SUCESS: added %d predictions' % actN
     else:
         print 'WARNING: Of %d expected, missing %d predictions (added %d)' % (expectedN,expectedN - actN,actN)
-        expectedKeys=[(h,p) for h,p in itertools.product(hlas,peptides)]
+        expectedKeys = [(h,p) for h,p in itertools.product(hlas,peptides)]
         if expectedN<actN:
             print 'Extra peptides:'
             for i,row in resDf.iterrows():
@@ -137,13 +138,13 @@ def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumb
                     print '\t%s : %s' % (h,p)
         
         print 'Dropping duplicates...'
-        duplicatesInd=resDf.duplicated(cols=['hla','peptide'])
+        duplicatesInd = resDf.duplicated(cols=['hla','peptide'])
         print resDf.loc[duplicatesInd]
-        duplicatesInd=resDf.duplicated(cols=['hla','peptide'],take_last=True)
+        duplicatesInd = resDf.duplicated(cols=['hla','peptide'],take_last=True)
         print resDf.loc[duplicatesInd]
-        resDf=resDf.drop_duplicates(cols=['hla','peptide'])
-        actN=resDf.shape[0]
-        if actN==expectedN:
+        resDf = resDf.drop_duplicates(cols=['hla','peptide'])
+        actN = resDf.shape[0]
+        if actN == expectedN:
             print 'DUPLICATES: added %d predictions' % actN
         else:
             print 'NOT DUPLICATES: Of %d expected, missing %d predictions (added %d)' % (expectedN,expectedN - actN,actN)

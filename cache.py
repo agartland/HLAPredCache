@@ -6,7 +6,7 @@ import pandas as pd
 
 
 from helpers import *
-from predict import 
+from predict import *
 
 class hlaPredCache(dict):
     """
@@ -20,36 +20,36 @@ class hlaPredCache(dict):
      (3) Integrate better with the prediction requester above
 
     """
-    def __init__(self, baseFn=None, kmers=[8,9,10,11], warn=True, oldFile=False):
+    def __init__(self, baseFn = None, kmers = [8,9,10,11], warn = True, oldFile = False):
         dict.__init__(self)
-        self.repAsteriskPattern=re.compile('\*')
+        self.repAsteriskPattern = re.compile('\*')
 
         if oldFile:
-            columnNames=['method','hla','peptide','ic50']
-            readCSVFunc=partial(pd.read_csv,names=columnNames,header=None)
+            columnNames = ['method','hla','peptide','ic50']
+            readCSVFunc = partial(pd.read_csv, names = columnNames, header = None)
         else:
-            columnNames=['method','hla','peptide','core','ic50']
-            readCSVFunc=partial(pd.read_csv,names=columnNames,skiprows=1)
+            columnNames = ['method','hla','peptide','core','ic50']
+            readCSVFunc = partial(pd.read_csv, names = columnNames, skiprows = 1)
         if not baseFn is None:
-            self.name=baseFn.split('.')[0]
-            self.predictionMethod=baseFn.split('.')[-1]
-            fileList=['%s.%d.out' % (baseFn,k) for k in kmers]
-            self.fileList=fileList
+            self.name = baseFn.split('.')[0]
+            self.predictionMethod = baseFn.split('.')[-1]
+            fileList = ['%s.%d.out' % (baseFn,k) for k in kmers]
+            self.fileList = fileList
 
             for fn in fileList:
-                predDf=readCSVFunc(fn)
-                if kmers==[15] and oldFile:
-                    predDf['core']=predDf.ic50.map(lambda s: s.split("'")[1])
-                    predDf['ic50']=predDf.ic50.map(lambda s: s[1:].split(",")[0])
-                    predDf['ic50']=predDf.ic50.map(float64)
+                predDf = readCSVFunc(fn)
+                if kmers == [15] and oldFile:
+                    predDf['core'] = predDf.ic50.map(lambda s: s.split("'")[1])
+                    predDf['ic50'] = predDf.ic50.map(lambda s: s[1:].split(",")[0])
+                    predDf['ic50'] = predDf.ic50.map(float64)
 
-                predDf['hla']=predDf.hla.map(partial(re.sub,self.repAsteriskPattern,'_'))
+                predDf['hla'] = predDf.hla.map(partial(re.sub,self.repAsteriskPattern,'_'))
                 self.update({(h,p):v for h,p,v in zip(predDf['hla'],predDf['peptide'],predDf['ic50'])})
         else:
-            self.predictionMethod=''
-            self.name=''
-        self.warn=warn
-        self.useRand=False
+            self.predictionMethod = ''
+            self.name = ''
+        self.warn = warn
+        self.useRand = False
     def __str__(self):
         return '%s (%s)' % (self.name,self.predictionMethod)
 
@@ -81,60 +81,60 @@ class hlaPredCache(dict):
                     pass
                     """Only want to warn about missing predictions, not invalid peptides"""
                     #print 'Invalid peptide %s, returning nan' % (peptide)
-                val = nan
+                val = np.nan
             else:
                 try:
                     val = dict.__getitem__(self, (hla,peptide))
                 except KeyError:
                     if self.warn:
                         print 'HLA prediction not found (%s,%s), returning nan' % (hla,peptide)
-                    val = nan
+                    val = np.nan
         return val
     def getRand(self,key):
         return self.getItem(key,useRand=True)
     def permutePeptides(self,seed=None):
         if not seed is None:
             np.random.seed(seed)
-        uPep=list({k[1] for k in self.keys()})
-        uHLA=list({k[0] for k in self.keys()})
-        self.transMat = zeros((len(uPep),len(uHLA)),dtype=int)
-        for i in arange(len(uHLA)):
-            self.transMat[:,i] = np.random.permutation(arange(len(uPep),dtype=int))
-        self.uPep=uPep
-        self.uHLA=uHLA
+        uPep = list({k[1] for k in self.keys()})
+        uHLA = list({k[0] for k in self.keys()})
+        self.transMat = np.zeros((len(uPep), len(uHLA)), dtype = int)
+        for i in np.arange(len(uHLA)):
+            self.transMat[:,i] = np.random.permutation(np.arange(len(uPep), dtype = int))
+        self.uPep = uPep
+        self.uHLA = uHLA
 
     def __setitem__(self, key, val):
         dict.__setitem__(self, key, val)
 
-    def addPredictions(self,method,hlas,peptides,useTempFiles=False,verbose=False,dumbledore=False,query=True,force=False,no_cache=False,cpus=1):
+    def addPredictions(self, method, hlas, peptides, useTempFiles = False, verbose = False, dumbledore=False, query=True, force=False, no_cache=False, cpus=1):
         """Run all neccessary predictions and add results to the cache
         without updating existing predictions
         Returns number of predictions added (counting only those that were new to the cache)"""
-        if self.predictionMethod=='':
-            self.predictionMethod=method
-        if not method==self.predictionMethod:
+        if self.predictionMethod == '':
+            self.predictionMethod = method
+        if not method == self.predictionMethod:
             print 'METHOD does not match existing method name for this cache'
 
-        neededHLAs=set()
-        neededPeptides=set()
+        neededHLAs = set()
+        neededPeptides = set()
         for h,pep in itertools.product(hlas,peptides):
             if not self.has_key((h,pep)):
                 neededHLAs.add(h)
                 neededPeptides.add(pep)
-        hlas=list(neededHLAs)
-        peptides=list(neededPeptides)
-        nAdded=0
-        if len(hlas)>0 or len(peptides)>0:
-            resDf=predictHLABinding(method,hlas,peptides,
-                                    verbose=verbose,
-                                    useTempFiles=useTempFiles,
-                                    dumbledore=dumbledore,
-                                    query=query,
-                                    force=force,
-                                    cpus=cpus,
-                                    no_cache=no_cache)
+        hlas = list(neededHLAs)
+        peptides = list(neededPeptides)
+        nAdded = 0
+        if len(hlas) > 0 or len(peptides) > 0:
+            resDf = predictHLABinding(method,hlas,peptides,
+                                    verbose = verbose,
+                                    useTempFiles = useTempFiles,
+                                    dumbledore = dumbledore,
+                                    query = query,
+                                    force = force,
+                                    cpus = cpus,
+                                    no_cache = no_cache)
             self.update({(re.sub(self.repAsteriskPattern,'_',h),p):v for h,p,v in zip(resDf['hla'],resDf['peptide'],resDf['pred'])})
-            nAdded=resDf.shape[0]
+            nAdded = resDf.shape[0]
         return nAdded
     def addPredictionValues(self,hlas,peptides,values):
         """Add predictions as hla, peptide and values without running any predictor

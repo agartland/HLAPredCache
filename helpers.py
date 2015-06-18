@@ -1,5 +1,6 @@
 import numpy as np
 import string
+import re
 
 __all__ = ['BADAA',
             'AALPHABET',
@@ -12,7 +13,7 @@ __all__ = ['BADAA',
             'getIC50',
             'getMers',
             'getMerInds',
-            'grabKmers',
+            'grabKmer',
             'grabKmerInds',
             'findpeptide']
 
