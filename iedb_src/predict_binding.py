@@ -51,9 +51,14 @@ class Prediction():
 
     def commandline_input(self, args):
         '''Make predictions given user provided list of sequences. The input sequence is in fasta format.'''
-        (method, allele, length, fname) = args
+        (method, allele, length, fname, peptideList) = args
         
-        proteins = self.read_protein(fname)
+        if not peptideList:
+            proteins = self.read_protein(fname)
+        else:
+            with open(fname, 'r') as fh:
+                proteins = [p.strip() for p in fh.readlines()]
+        
         species = get_species(allele)
         allele = allele.split()
         length = length.split()
@@ -64,8 +69,12 @@ class Prediction():
 
         input = InputData(self.version, method, allele, hla_seq, length, proteins, species)
         mhc_predictor = MHCBindingPredictions(input)
-        mhc_scores = mhc_predictor.predict(input.input_protein.sequences)
-        table_rows = self.format_binding(input, mhc_scores, method, use_cutoff, cutoff_value)
+        if not peptideList:
+            mhc_scores = mhc_predictor.predict(input.input_protein.sequences, peptideList = peptideList)
+        else:
+            mhc_scores = mhc_predictor.predict(proteins, peptideList = peptideList)
+        
+        table_rows = self.format_binding(input, mhc_scores, method, use_cutoff, cutoff_value, peptideList=peptideList, peptide_list=proteins)
         
         method_used = ','.join(mhc_predictor.get_method_set_selected(method))
         table_rows.sort(key=lambda tup: tup[6])
@@ -81,7 +90,7 @@ class Prediction():
         elif method == 'consensus':
             header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'ann_ic50','ann_rank','smm_ic50','smm_rank','comblib_sidney2008_score','comblib_sidney2008_rank')
         else:
-            header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'rank') 
+            header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'rank')
         print '\t'.join(header)
         
         for table_row in table_rows:
@@ -94,7 +103,10 @@ class Prediction():
         from itertools import chain
         return list(chain(*(i if isinstance(i, tuple) else (i,) for i in tup)))
  
-    def format_binding(self, proteins, results, method, cutoff, value):
+    def format_binding(self, proteins, results, method, cutoff, value, peptideList=False, peptide_list=None):
+        if peptideList:
+            proteins = peptide_list
+
         for length, allele, score, method_list in results:
             if method == 'consensus' or (method == 'IEDB_recommended' and method_list != 'netmhcpan'):
                 score_list = []
@@ -103,7 +115,7 @@ class Prediction():
                     scores = zip(s[0], zip(*ranks_scores))
                     scores = self.insert_dash(method_list, self.modify(scores))
                     score_list.append(scores)
-                self.add_rows_binding(allele, length, proteins, score_list, method_list, cutoff, value)
+                self.add_rows_binding(allele, length, proteins, score_list, method_list, cutoff, value, peptideList)
             elif method == 'IEDB_recommended' and method_list == 'netmhcpan':
                 score_list = []
                 for s in score:
@@ -111,19 +123,27 @@ class Prediction():
                     scores = self.cons_netmhcpan(scores)
                     scores = self.insert_dash(method_list, self.modify(scores))
                     score_list.append(scores)
-                self.add_rows_binding(allele, length, proteins, score_list, method_list, cutoff, value)
+                self.add_rows_binding(allele, length, proteins, score_list, method_list, cutoff, value, peptideList)
             else:
-                self.add_rows_binding(allele, length, proteins, score, method_list, cutoff, value)
+                self.add_rows_binding(allele, length, proteins, score, method_list, cutoff, value, peptideList)
         return self.modify(self.row_data)
     
     
-    def add_rows_binding(self, allele, length, proteins, score_list, method_list, cutoff, value):
-        for (i,(sequence, predictions)) in enumerate(zip(proteins.input_protein.sequences, score_list)):
-            for (k, prediction) in enumerate(predictions):
-                sequence_source = "%s" %(i+1)
-                sequence_start = "%s" %(k + 1)
-                sequence_end = "%s" %(k + int(length))
-                scanned_sequence = sequence[k : k + length]
+    def add_rows_binding(self, allele, length, proteins, score_list, method_list, cutoff, value, peptideList):
+        if not peptideList:
+            for (i,(sequence, predictions)) in enumerate(zip(proteins.input_protein.sequences, score_list)):
+                for (k, prediction) in enumerate(predictions):
+                    sequence_source = "%s" %(i+1)
+                    sequence_start = "%s" %(k + 1)
+                    sequence_end = "%s" %(k + int(length))
+                    scanned_sequence = sequence[k : k + length]
+                    self.row_data.append((allele, sequence_source, sequence_start, sequence_end, length, scanned_sequence, prediction, method_list.replace(",","-")))
+        else:
+            for (k,(sequence, prediction)) in enumerate(zip(proteins, score_list[0])):
+                sequence_source = "%s" %(k+1)
+                sequence_start = "1"
+                sequence_end = "%s" %(int(length))
+                scanned_sequence = sequence
                 self.row_data.append((allele, sequence_source, sequence_start, sequence_end, length, scanned_sequence, prediction, method_list.replace(",","-")))
     
     def cons_netmhcpan(self, scores):
@@ -294,6 +314,7 @@ Following are the available choices - \n\
             parser = OptionParser(usage=usage)
             parser.add_option("-m", dest="filename_mhc",
                               help="FILE containing a single MHC sequence in fasta format.", metavar="FILE")
+            parser.add_option("-p", dest='peptide_list')
             (options, args) = parser.parse_args()
             
             # If there's input ready, do something, else do something
@@ -312,7 +333,41 @@ Following are the available choices - \n\
                 self.commandline_help()
         except UnexpectedInputError,e:
             print str(e)
+    def mymain(self):
+        import argparse
+        self.version = '20130222'
+
+        parser = argparse.ArgumentParser(description='IEDB MHC-I binding prdiction tools.')
+
+        parser.add_argument('--method', '-m', type=str,
+                           choices = ['ann', 'comblib_sidney2008', 'consensus', 'IEDB_recommended', 'netmhcpan', 'smm','smmpmbec', 'pickpocket', 'netmhccons'],
+                           help='method',
+                           required=True)
+
+        parser.add_argument('--allele','-a', type=str,
+                           help='allele (use "list" to list available alleles for a given method)',
+                           default='list')
+
+        parser.add_argument('--filename_mhc', type=str,
+                           help='file containing a single MHC sequence in fasta format')
+
+        parser.add_argument('--length','-L',metavar='L', type=str, default = "9", help='length of the peptides')
+
+        parser.add_argument('--fname', '-f', help='file containg amino acid sequences')
+
+        parser.add_argument("--peptide_list","-p", default=False,help="input file contains a list of kmer peptides", action="store_true")
+
+        args = parser.parse_args()
+
+        if args.allele == 'list':
+            self.commandline_mhc((args.method,''))
+        elif not args.filename_mhc is None:
+            self.commandline_input_mhc(args, (args.method,args.length,args.fname))  # args=[method, length, fname]
+        else:
+            self.commandline_input((args.method,args.allele,args.length,args.fname,args.peptide_list))  # args=[method, mhc, length, fname]
+
+
 
 if __name__ == '__main__':
-    Prediction().main()
+    Prediction().mymain()
     

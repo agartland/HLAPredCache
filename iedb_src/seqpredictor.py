@@ -78,9 +78,12 @@ class ARBMatrix(object):
         '''The unit of prediction scores'''
         return 'IC50 (nM)'
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred,peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
-        peptide_list = get_peptides(sequence, self.length)
+        if not peptideList:
+            peptide_list = get_peptides(sequence, self.length)
+        else:
+            peptide_list = sequence
         scores = self.predict_peptide_list(peptide_list)
         return scores
 
@@ -161,9 +164,12 @@ class SMMMatrix:
         '''The unit of prediction scores'''
         return 'IC50 (nM)'
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred,peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
-        peptide_list = get_peptides(sequence, self.length)
+        if not peptideList:
+            peptide_list = get_peptides(sequence, self.length)
+        else:
+            peptide_list = sequence
         scores = self.predict_peptide_list(peptide_list)
         
         #get percentile scores
@@ -238,9 +244,9 @@ class ANNPredictor:
         '''The unit of prediction scores'''
         return 'IC50 (nM)'
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred,peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
-        scores = self.predict_peptide_list(sequence)
+        scores = self.predict_peptide_list(sequence,peptideList)
         
         #get percentile scores
         args = ('ann', self.mhc.replace("*",""), self.length)
@@ -248,12 +254,19 @@ class ANNPredictor:
         percentile = ps.get_percentile_score(scores)
         return zip(scores, percentile)
 
-    def predict_peptide_list(self, peptide_list):
+    def predict_peptide_list(self, peptide_list,peptideList):
         '''This routine can be directly called so that you do not make a file for each prediction.'''
-        infile=tempfile.NamedTemporaryFile(prefix=self.path_data+'/', suffix='input')
-        infile.write(">test\n%s\n" % peptide_list)
-        infile.seek(0)
-        cmd = self.path_executable + ' -a ' + self.mhc + ' -l ' + str(self.length) + ' ' + infile.name 
+        infile = tempfile.NamedTemporaryFile(prefix=self.path_data+'/', suffix='input')
+        if not peptideList:
+            infile.write(">test\n%s\n" % peptide_list)
+            infile.seek(0)
+            cmd = self.path_executable + ' -a ' + self.mhc + ' -l ' + str(self.length) + ' ' + infile.name 
+        else:
+            for p in peptide_list:
+                infile.write('%s\n' % p)
+            infile.seek(0)
+            cmd = self.path_executable + ' -a ' + self.mhc + ' -l ' + str(self.length) + ' ' + infile.name 
+
         f = os.popen(cmd)
         lines = f.readlines()
         pid = f.close()
@@ -336,10 +349,13 @@ class NetMHCpanPredictor:
         '''The unit of prediction scores'''
         return 'IC50 (nM)'
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred,peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
         ic50scores = []
-        peptide_list = get_peptides(sequence, self.length)
+        if not peptideList:
+            peptide_list = get_peptides(sequence, self.length)
+        else:
+            peptide_list = sequence
         scores = self.predict_peptide_list(peptide_list)
         if self.mhc != 'User-defined':
             if self.method == 'IEDB_recommended':
@@ -500,10 +516,13 @@ class PickPocketPredictor:
         return scores
 # 
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred, peptideList = False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
         ic50scores = []
-        peptide_list = get_peptides(sequence, self.length)
+        if not peptideList:
+            peptide_list = get_peptides(sequence, self.length)
+        else:
+            peptide_list = sequence
         scores = self.predict_peptide_list(peptide_list)
         
         if self.mhc != 'User defined':
@@ -609,10 +628,13 @@ class NetMHCconsPredictor:
                     scores.append(float(data_list[5]))
         return scores
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred, peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
         ic50scores = []
-        peptide_list = get_peptides(sequence, self.length)
+        if not peptideList:
+            peptide_list = get_peptides(sequence, self.length)
+        else:
+            peptide_list = sequence
         scores = self.predict_peptide_list(peptide_list)
         
         if self.mhc != 'User defined':
@@ -713,9 +735,12 @@ class CombinatorialLibrary:
         '''The unit of prediction scores'''
         return 'Score'
 
-    def predict_sequence(self,sequence,pred):   
+    def predict_sequence(self,sequence,pred,peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
-        peptide_list = get_peptides(sequence, self.length)
+        if not peptideList:
+            peptide_list = get_peptides(sequence, self.length)
+        else:
+            peptide_list = sequence
         scores = self.predict_peptide_list(peptide_list)
         
         #get percentile scores
@@ -835,7 +860,7 @@ class ConsensusPredictor(object):
         '''The unit of prediction scores'''
         return 'Percentile'
 
-    def predict_sequence(self,sequence,pred):
+    def predict_sequence(self,sequence,pred,peptideList=False):
         scores_predictor = [] # Lower the score, the better.
         ic50scores = []
         for (predictor, method_name) in zip(self.predictor_list, self.available_method_list):
@@ -844,13 +869,13 @@ class ConsensusPredictor(object):
             score_distribution = self.dic_score_distributions[key]
             
             if method_name == 'smm' or method_name == 'ann' or method_name == 'comblib_sidney2008':
-                spercentile = predictor.predict_sequence(sequence,pred)
+                spercentile = predictor.predict_sequence(sequence,pred,peptideList)
                 scores = tuple([sp[0] for sp in spercentile])
                 percentile = tuple([sp[1] for sp in spercentile])
                 ic50scores.append(scores)
                 scores_predictor.append(percentile)
             else:
-                scores = predictor.predict_sequence(sequence,pred)
+                scores = predictor.predict_sequence(sequence,pred,peptideList)
                 ic50scores.append(scores)
                 # here scores = individual scores for each of the methods
                 scores_percentile = [self.get_percentile_score(score, score_distribution) for score in scores]  #range = [0....100]
@@ -1044,7 +1069,7 @@ class MHCBindingPredictions:
                     for sequence in sequence_list:
                         scores.append(predictor.predict_sequence(sequence,pred))
                 else:
-                    scores.append(predictor.predict_sequence_list(sequence_list,pred))
+                    scores.append(predictor.predict_sequence(sequence_list,pred,peptideList))
                 results.append((length, allele, scores, method_name))
         else:
             
@@ -1074,7 +1099,7 @@ class MHCBindingPredictions:
                         for sequence in sequence_list:
                             scores.append(predictor.predict_sequence(sequence,pred))
                     else:
-                        scores.append(predictor.predict_sequence_list(sequence_list,pred))
+                        scores.append(predictor.predict_sequence(sequence_list,pred,peptideList))
                     results.append((length, allele, scores, method_name))
             else:
                 '''
@@ -1091,13 +1116,14 @@ class MHCBindingPredictions:
                     for sequence in sequence_list:
                         scores.append(predictor.predict_sequence(sequence,pred))
                 else:
-                    scores.append(predictor.predict_sequence_list(sequence_list,pred))
+                    scores.append(predictor.predict_sequence(sequence_list,pred,peptideList))
                 results.append((int(length), mhc, scores, method_name))
         return results
      
     def method_lookup(self, allele, length):
+        """TODO: extract all the references to the IEDB directories so that paths can be specified somewhere else"""
         import sqlite3 as lite
-        path_to_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../data/allele.sqlite')
+        path_to_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../iedb/mhc_i/data/allele.sqlite')
         conn =  lite.connect(path_to_db)
         method_list = []
         with conn:

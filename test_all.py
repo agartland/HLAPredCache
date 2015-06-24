@@ -2,8 +2,10 @@ import unittest
 import numpy as np
 
 from cache import hlaPredCache
+from predict import iedbPredict
+from helpers import *
 
-class TestTools(unittest.TestCase):
+class TestHelpers(unittest.TestCase):
     def setUp(self):
         self.gag = 'MGARASVLSGGELDRWEKIRLRPGGKKKYKLKHIVWASRELERFAVNPGLLETSEGCRQILGQLQPSLQTGSEELRSLYNTVATLYCVHQRIEIKDTKEALDKIEEEQ'
         self.badpep = 'MGARXASZVLSGGE'
@@ -11,14 +13,15 @@ class TestTools(unittest.TestCase):
         self.h = 'A*0201'
     def tearDown(self):
         pass
-    def test_getmer(self):
-        pass
+    def test_getmers(self):
+        mers = getMers(self.gag, nmers = [9])
+        self.assertEqual(mers[0], 'MGARASVLS')
 
 class TestCache(unittest.TestCase):
     def test_load(self):
-        ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = True, oldFile = False)
+        ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = False, oldFile = False)
     def test_get(self):
-        ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = True, oldFile = False)
+        ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = False, oldFile = False)
         self.assertEqual(ba[('A*2601','MGPGQVLFR')],10.3372161729)
         self.assertEqual(ba[('A*0203','ASRKLGDRG')],10.6185304083)
         self.assertEqual(ba[('A*0201','ASRKLGDRG')],10.7537776369)
@@ -30,7 +33,7 @@ class TestCache(unittest.TestCase):
         """
         self.assertTrue(np.isnan(ba[('A*2601','AGPGQVLFR')]))
     def test_slice(self):
-        ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = True, oldFile = False)
+        ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = False, oldFile = False)
         
         self.assertEqual(ba[('A*0203','ASRKLGDRG')],10.6185304083)
         self.assertEqual(ba[('A*0201','ASRKLGDRG')],10.7537776369)
@@ -41,6 +44,27 @@ class TestCache(unittest.TestCase):
         #self.assertAlmostEqual(value, expected, places = 3)
         
         self.assertTrue(np.isnan(ba_slice[('A*0203','ASRKLGDRG')]))
+
+class TestIEDBWrap(unittest.TestCase):
+    def setUp(self):
+        self.gag = 'MGARASVLSGGELDRWEKIRLRPGGKKKYKLKHIVWASRELERFAVNPGLLETSEGCRQILGQLQPSLQTGSEELRSLYNTVATLYCVHQRIEIKDTKEALDKIEEEQ'
+        self.badpep = 'MGARXASZVLSGGE'
+        self.gappedpep = 'MGAR-ASZVL-SGGE'
+        self.h = 'A*0201'
+        self.hlas = ['A*0201', 'A*0203', 'B*5701', 'A*2402']
+    def test_dummy(self):
+        mers = getMers(self.gag, nmers = [9])
+        df = iedbPredict(method = 'RAND', hlas = self.hlas, peptides = mers[:10])
+        self.assertEqual(df.shape[0], len(self.hlas) * 10)
+        self.assertEqual(df['method'].iloc[0], 'RAND')
+    def test_predict(self):
+        mers = getMers(self.gag, nmers = [9])
+        df = iedbPredict(method = 'netmhcpan', hlas = self.hlas, peptides = mers[:10])
+        self.assertEqual(df.shape[0], len(self.hlas) * 10)
+        self.assertEqual(df['method'].iloc[0], 'netmhcpan')
+class TestIEDBSrc(unittest.TestCase):
+    pass
+
 
 if __name__ == '__main__':
     unittest.main()

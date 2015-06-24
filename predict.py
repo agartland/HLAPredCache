@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import itertools
 
 import time
 from  tempfile import NamedTemporaryFile, mktemp
@@ -11,11 +12,23 @@ try:
 except ImportError:
     mb = None
 
-__all__ = ['iedbPrediction',
+__all__ = ['iedbPredict',
            'predictHLABinding']
 
-def iedbPrediction():
-    pass
+def iedbPredict(method,hlas,peptides):
+    results = dict(method = [], hla = [], peptide = [], core = [], pred = [])
+    if method == 'RAND':
+        for h,pep in itertools.product(hlas,peptides):
+            results['method'].append('RAND')
+            results['hla'].append(h)
+            results['peptide'].append(pep)
+            results['core'].append(pep)
+            results['pred'].append(np.random.rand())
+    else:
+        pass
+
+    resDf = pd.DataFrame(results, columns = ['method','hla','peptide','core','pred'])
+    return resDf
 
 def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumbledore=False,query=True,force=False,no_cache=False,cpus=1):
     """Use the new predictors and return a resDf with
@@ -78,15 +91,15 @@ def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumb
 
             """Blocking call to the predictor"""
             print ' '.join(cmd)
-            mhc_bindingsProc=subprocess.call(cmd)
+            mhc_bindingsProc = subprocess.call(cmd)
 
             if mhc_bindingsProc == 0:
                 """Read in the out file"""
-                resDf=pd.read_csv(outFn,names=columnNames)
+                resDf = pd.read_csv(outFn,names=columnNames)
                 resDf['hla']=resDf.hla.map(partial(re.sub,'[*]','_'))
-                resDf=resDf.rename_axis(mapper={'ic50':'pred'},axis=1)
+                resDf = resDf.rename_axis(mapper={'ic50':'pred'},axis=1)
             else:
-                resDf=pd.DataFrame()
+                resDf = pd.DataFrame()
         
         else:
             """Get predictions via tempfiles using the new predictor cache written by Dave Swan (works on compusrv and rhinos)"""
@@ -107,11 +120,11 @@ def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumb
 
             if mhc_bindingsProc == 0:
                 """Read in the out file"""
-                resDf=pd.read_csv(outFn)
-                resDf=resDf.rename_axis(axis=1,mapper={'Value':'pred'})
-                resDf=resDf.rename_axis(axis=1,mapper=string.lower)
+                resDf = pd.read_csv(outFn)
+                resDf = resDf.rename_axis(axis=1, mapper={'Value':'pred'})
+                resDf = resDf.rename_axis(axis=1, mapper=string.lower)
             else:
-                resDf=pd.DataFrame()
+                resDf = pd.DataFrame()
 
         """Reomve all the temporary files"""
         os.unlink(pepFn)
