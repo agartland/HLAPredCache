@@ -7,6 +7,8 @@ from util import * #@UnusedWildImport
 from seqpredictor import MHCBindingPredictions
 from setupinfo import * #@UnusedWildImport
 
+import pandas as pd
+
 class Prediction():
     
     def __init__(self):
@@ -48,17 +50,11 @@ class Prediction():
                 score.insert(3,dash)
             scores.append(tuple(self.flatten(score)))
         return scores
+    def predict(self, method,allele, length,peptides):
+        df = self._predict(method,allele,length,peptides,peptideList = True)
+        return df
 
-    def commandline_input(self, args):
-        '''Make predictions given user provided list of sequences. The input sequence is in fasta format.'''
-        (method, allele, length, fname, peptideList) = args
-        
-        if not peptideList:
-            proteins = self.read_protein(fname)
-        else:
-            with open(fname, 'r') as fh:
-                proteins = [p.strip() for p in fh.readlines()]
-        
+    def _predict(self,method,allele,length,proteins,peptideList):
         species = get_species(allele)
         allele = allele.split()
         length = length.split()
@@ -91,10 +87,26 @@ class Prediction():
             header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'ann_ic50','ann_rank','smm_ic50','smm_rank','comblib_sidney2008_score','comblib_sidney2008_rank')
         else:
             header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'rank')
-        print '\t'.join(header)
-        
-        for table_row in table_rows:
-            print '\t'.join(map(str, table_row))
+
+        d = {h:[] for h in header}
+        for row in table_rows:
+            for h,v in zip(header,row):
+                d[h].append(v)
+        L = len(d['allele'])
+        d = {h:v for h,v in d.items() if len(v)==L}
+        cols = [h for h in header if h in d]
+        return pd.DataFrame(d)[cols]
+
+    def commandline_input(self, args):
+        '''Make predictions given user provided list of sequences. The input sequence is in fasta format.'''
+        (method, allele, length, fname, peptideList) = args
+        if not peptideList:
+            proteins = self.read_protein(fname)
+        else:
+            with open(fname, 'r') as fh:
+                proteins = [p.strip() for p in fh.readlines()]
+
+        print self._predict(method,allele,length,proteins,peptideList).to_string()
         
     def modify(self, lst):
         return[tuple(self.flatten(x)) for x in lst]
