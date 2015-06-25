@@ -184,8 +184,8 @@ class Prediction():
                 del lis[-1]
                 formated_data.append(tuple(lis))
         return formated_data
-    
     def commandline_input_mhc(self, parser, fname):
+        """TODO: this function is not available programatically or with a peptide list"""
         '''This version takes a file containing an mhc sequence as input.
            Make predictions given user provided list of sequences. The input sequence is in fasta format.'''
         (options, args) = parser.parse_args()
