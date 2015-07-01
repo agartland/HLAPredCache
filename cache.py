@@ -105,10 +105,8 @@ class hlaPredCache(dict):
 
     def __setitem__(self, key, val):
         dict.__setitem__(self, key, val)
-
-    def addPredictions(self, method, hlas, peptides, useTempFiles = False, verbose = False, dumbledore=False, query=True, force=False, no_cache=False, cpus=1):
-        """Run all neccessary predictions and add results to the cache
-        without updating existing predictions
+    def addPredictions(self, method, hlas, peptides):
+        """Run all neccessary predictions and add results to the cache without updating existing predictions
         Returns number of predictions added (counting only those that were new to the cache)"""
         if self.predictionMethod == '':
             self.predictionMethod = method
@@ -125,14 +123,7 @@ class hlaPredCache(dict):
         peptides = list(neededPeptides)
         nAdded = 0
         if len(hlas) > 0 or len(peptides) > 0:
-            resDf = predictHLABinding(method,hlas,peptides,
-                                    verbose = verbose,
-                                    useTempFiles = useTempFiles,
-                                    dumbledore = dumbledore,
-                                    query = query,
-                                    force = force,
-                                    cpus = cpus,
-                                    no_cache = no_cache)
+            resDf = iedbPredict(method,hlas,peptides)
             self.update({(re.sub(self.repAsteriskPattern,'_',h),p):v for h,p,v in zip(resDf['hla'],resDf['peptide'],resDf['pred'])})
             nAdded = resDf.shape[0]
         return nAdded
@@ -153,7 +144,7 @@ class hlaPredCache(dict):
     def slice(self,hlas,peptides):
         """Return a new hlaPredCache() with a subset of the predictions,
         identified by hlas and peptides"""
-        out=hlaPredCache()
+        out = hlaPredCache(warn = self.warn)
         out.update({(h,pep):self[(h,pep)] for h,pep in itertools.product(hlas,peptides)})
         return out
 

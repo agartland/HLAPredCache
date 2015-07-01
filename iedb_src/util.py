@@ -219,8 +219,10 @@ class PredictorSelectionB(object):
                             if int(length) in processing_netmhcpan:
                                 tool_selection.append((mhc, int(length)))
                         else: tool_selection.append((mhc, int(length)))
-                            
+
         if len(tool_selection) == 0:
+            import ipdb
+            ipdb.set_trace()                    
             raise (UnexpectedInputError("Could not find tools matching species='%s', allele='%s', length='%s', method='%s'." % (self.species, self.mhc, self.length, self.pred_method)))
         return self.clean(tool_selection)
 

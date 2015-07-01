@@ -9,10 +9,14 @@ from setupinfo import * #@UnusedWildImport
 
 import pandas as pd
 
+__all__ = ['Prediction']
+
 class Prediction():
+    """Class containing methods for using any IEDB method to predict MHC I binding affinity."""
     
     def __init__(self):
         self.row_data = []
+        self.version = '20130222'
         
     #TODO: needs to change 
     def read_protein(self, fname):
@@ -50,7 +54,32 @@ class Prediction():
                 score.insert(3,dash)
             scores.append(tuple(self.flatten(score)))
         return scores
-    def predict(self, method,allele, length,peptides):
+    def predict(self, method,allele,peptides):
+        """Predict MHC I binding affinity for all allele:peptide pairs using method.
+
+        Length is detected using the first peptide in the list.
+        TODO: predict for all peptide lengths, one at a time.
+
+        Parameters
+        ----------
+        method : string
+            Options: ann, comblib_sidney2008, consensus, IEDB_recommended, netmhcpan, smm, smmpmbec, pickpocket, netmhccons
+        allele : string
+            MHC/HLA allele in format: L*12:34
+        peptides : list
+            List of AA sequences.
+        species : string
+            Default: 'human'
+
+        Returns
+        -------
+        df : pd.DataFrame
+            Columns differ by method.
+            Typically: allele, seq_num, length, peptide, method, score, rank, unit
+        """
+
+        length = "%d" % len(peptides[0])
+
         df = self._predict(method,allele,length,peptides,peptideList = True)
         return df
 

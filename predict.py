@@ -12,8 +12,16 @@ try:
 except ImportError:
     mb = None
 
+import iedb_src.predict_binding as iedb_predict
+
 __all__ = ['iedbPredict',
            'predictHLABinding']
+def convertHLAToIEDB(h):
+    """Takes format A*1234 or A_1234 and returns A*12:34"""
+    return 'HLA-' + h[:4].replace('_','*') + ':' + h[4:]
+def convertHLABack(h):
+    """Takes format HLA-A*12:34 and returns A_1234"""
+    return h[4:].replace('*','_').replace(':','')
 
 def iedbPredict(method,hlas,peptides):
     results = dict(method = [], hla = [], peptide = [], core = [], pred = [])
@@ -24,11 +32,21 @@ def iedbPredict(method,hlas,peptides):
             results['peptide'].append(pep)
             results['core'].append(pep)
             results['pred'].append(np.random.rand())
+        resDf = pd.DataFrame(results, columns = ['method','hla','peptide','core','pred'])
     else:
-        pass
+        resDf = None
+        for h in hlas:
 
-    resDf = pd.DataFrame(results, columns = ['method','hla','peptide','core','pred'])
-    return resDf
+            tmp = iedb_predict.Prediction().predict(method,convertHLAToIEDB(h), peptides)
+            if resDf is None:
+                resDf = tmp
+            else:
+                resDf = pd.concat((resDf,tmp),axis=0)
+        resDf['hla'] = resDf.allele.map(convertHLABack)
+        resDf['method'] = method
+        resDf['core'] = resDf.peptide
+        resDf['pred'] = resDf.ic50
+    return resDf[['method','hla','peptide','core','pred']]
 
 def predictHLABinding(method,hlas,peptides,useTempFiles=False,verbose=False,dumbledore=False,query=True,force=False,no_cache=False,cpus=1):
     """Use the new predictors and return a resDf with

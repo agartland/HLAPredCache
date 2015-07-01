@@ -265,7 +265,7 @@ class ANNPredictor:
             for p in peptide_list:
                 infile.write('%s\n' % p)
             infile.seek(0)
-            cmd = self.path_executable + ' -a ' + self.mhc + ' -l ' + str(self.length) + ' ' + infile.name 
+            cmd = self.path_executable + ' -a ' + self.mhc + ' -l ' + str(self.length) + ' -p ' + infile.name 
 
         f = os.popen(cmd)
         lines = f.readlines()

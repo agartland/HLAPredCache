@@ -18,6 +18,8 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(mers[0], 'MGARASVLS')
 
 class TestCache(unittest.TestCase):
+    def setUp(self):
+        self.gag = 'MGARASVLSGGELDRWEKIRLRPGGKKKYKLKHIVWASRELERFAVNPGLLETSEGCRQILGQLQPSLQTGSEELRSLYNTVATLYCVHQRIEIKDTKEALDKIEEEQ'
     def test_load(self):
         ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = False, oldFile = False)
     def test_get(self):
@@ -34,7 +36,8 @@ class TestCache(unittest.TestCase):
         self.assertTrue(np.isnan(ba[('A*2601','AGPGQVLFR')]))
     def test_slice(self):
         ba = hlaPredCache(baseFn = 'data/test', kmers = [9], warn = False, oldFile = False)
-        
+        self.assertFalse(ba.warn)
+
         self.assertEqual(ba[('A*0203','ASRKLGDRG')],10.6185304083)
         self.assertEqual(ba[('A*0201','ASRKLGDRG')],10.7537776369)
         
@@ -42,8 +45,16 @@ class TestCache(unittest.TestCase):
         self.assertEqual(ba_slice[('A*2601','MGPGQVLFR')],10.3372161729)
         self.assertEqual(ba_slice[('A*0201','ASRKLGDRG')],10.7537776369)
         #self.assertAlmostEqual(value, expected, places = 3)
-        
+
+        self.assertFalse(ba_slice.warn)
         self.assertTrue(np.isnan(ba_slice[('A*0203','ASRKLGDRG')]))
+    def test_add(self):
+        ba = hlaPredCache()
+        mers = getMers(self.gag, nmers=[9])
+        nAdded = ba.addPredictions('netmhcpan', ['A*2601', 'A*3201', 'A*0201'], mers)
+        """This peptide is a known A*02 binder"""
+        self.assertTrue(ba[('A*0201','SLYNTVATL')] < np.exp(6))
+        self.assertEqual(nAdded, 3 * len(mers))
 
 class TestIEDBWrap(unittest.TestCase):
     def setUp(self):
@@ -52,6 +63,7 @@ class TestIEDBWrap(unittest.TestCase):
         self.gappedpep = 'MGAR-ASZVL-SGGE'
         self.h = 'A*0201'
         self.hlas = ['A*0201', 'A*0203', 'B*5701', 'A*2402']
+        self.methods = ['ann', 'comblib_sidney2008', 'consensus', 'IEDB_recommended', 'netmhcpan', 'smm', 'smmpmbec', 'pickpocket', 'netmhccons']
     def test_dummy(self):
         mers = getMers(self.gag, nmers = [9])
         df = iedbPredict(method = 'RAND', hlas = self.hlas, peptides = mers[:10])
@@ -62,6 +74,28 @@ class TestIEDBWrap(unittest.TestCase):
         df = iedbPredict(method = 'netmhcpan', hlas = self.hlas, peptides = mers[:10])
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
         self.assertEqual(df['method'].iloc[0], 'netmhcpan')
+    def test_ann(self):
+        self.method_test(method = 'ann')
+    def test_comblib_sidney2008(self):
+        self.skipTest('Method supports limited MHC alleles.')
+        self.method_test(method = 'comblib_sidney2008')
+    def test_netmhcpan(self):
+        self.method_test(method = 'netmhcpan')
+    def test_smm(self):
+        self.method_test(method = 'smm')
+    def test_smmpmbec(self):
+        self.method_test(method = 'smmpmbec')
+    def test_pickpocket(self):
+        self.method_test(method = 'pickpocket')
+    def test_netmhccons(self):
+        self.method_test(method = 'netmhccons')
+    def method_test(self,method):
+        mers = getMers(self.gag, nmers = [9])
+        cols = ['pred','method','peptide','hla']
+        df = iedbPredict(method = method, hlas = self.hlas, peptides = mers[:10])
+        self.assertEqual(df.shape[0], len(self.hlas) * 10)
+        self.assertEqual(df['method'].iloc[0], method)
+        self.assertTrue(np.all([c in df.columns for c in cols]))
 class TestIEDBSrc(unittest.TestCase):
     pass
 
