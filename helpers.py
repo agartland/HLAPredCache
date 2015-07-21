@@ -16,6 +16,7 @@ __all__ = ['BADAA',
             'grabKmer',
             'grabKmerInds',
             'findpeptide',
+            'grabOverlappingKmer',
             'overlappingMers']
 
 BADAA = '-*BX#Z'
@@ -291,6 +292,8 @@ def grabKmer(seq,starti,k=9):
         If seq[starti] is a gap then returns None.
         If not then all gaps are removed before taking the k-length peptide
             (if there aren't k AAs then return is None)"""
+    if not isinstance(starti,int):
+        starti = int(starti)
 
     if (starti+k-1) <= (len(seq)-1) and starti >= 0:
         tmp = seq[starti:]
@@ -336,6 +339,8 @@ def grabKmerInds(seq, starti, k = 9):
         If seq[starti] is a gap then returns None.
         If not then all gaps are removed before taking the k-length peptide
             (if there aren't k AAs then return is None)"""
+    if not isinstance(starti,int):
+        starti = int(starti)
 
     if (starti+k-1) <= (len(seq)-1) and starti >= 0:
         tmp = np.arange(starti,len(seq))
@@ -528,7 +533,3 @@ def overlappingMers(seq, sitei, nmer = [8, 9, 10, 11], padding = 0):
     mers,uniqi = np.unique(mers,return_index = True)
     starti = np.array(starti)[uniqi]
     return mers,starti
-
-
-
-
