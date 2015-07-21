@@ -15,7 +15,8 @@ __all__ = ['BADAA',
             'getMerInds',
             'grabKmer',
             'grabKmerInds',
-            'findpeptide']
+            'findpeptide',
+            'overlappingMers']
 
 BADAA = '-*BX#Z'
 AALPHABET = 'ACDEFGHIKLMNPQRSTVWY'
@@ -200,8 +201,25 @@ def getIC50(ba, hlaList, mer, nmer = [8,9,10,11]):
 
 
 def getMers(seq, nmer = [8, 9 , 10, 11], seqLength = None):
-    """Breaks a peptide sequence (string) into a list of 8, 9, 10, 11 mers 
-    The seq will be padded with one or more '.' if it is shorter than seqLength"""
+    """Takes a AA sequence (string) and turns it into a list of 8, 9, 10, 11 mers
+    
+    The seq will be padded with one or more '.' if it is shorter than seqLength
+    These indices will match the peptides created by getMers()
+
+    Paramters
+    ---------
+    seq : str
+        Peptide sequence.
+    nmer : list
+        List of k's for the creation of all kmers.
+    seqLength : int
+        Minimum length of seq ('.' used for padding before applying the process)
+        Useful for garaunteeing that a certain number of kmers will be in the list.
+
+    Returns
+    -------
+    mers : list
+        All peptides of length nmer contained by seq"""
     if not seqLength is None:
         if len(seq) > seqLength:
             seq = seq[:seqLength]
@@ -227,7 +245,14 @@ def getMerInds(seq, nmer = [8, 9 , 10, 11], seqLength = None):
         List of k's for the creation of all kmers.
     seqLength : int
         Minimum length of seq ('.' used for padding before applying the process)
-        Useful for garaunteeing that a certain number of kmers will be in the list."""
+        Useful for garaunteeing that a certain number of kmers will be in the list.
+
+    Returns
+    -------
+    mers : list
+        All peptides of length nmer contained by seq
+    mers : list
+        Seq indices for mers"""
     if not seqLength is None:
         if len(seq) > seqLength:
             seq = seq[:seqLength]
@@ -283,7 +308,8 @@ def grabKmer(seq,starti,k=9):
         return full,ng
     else:
         return None,None
-def grabKmerInds(seq,starti,k=9):
+
+def grabKmerInds(seq, starti, k = 9):
     """Grab the kmer from seq starting at position starti with length k
     Return the indices of the gapped and non-gapped kmers
 
@@ -303,10 +329,10 @@ def grabKmerInds(seq,starti,k=9):
 
     Returns
     -------
-    gapped : str
-        A k-length peptide starting at starti from seq.
-    nonGapped : str
-        A k-length peptide starting at starti from seq.
+    gapped : ndarray
+        A k-length vector starting with starti containing the indices for the kmer
+    nonGapped : ndarray
+        A k-length vector starting at starti.
         If seq[starti] is a gap then returns None.
         If not then all gaps are removed before taking the k-length peptide
             (if there aren't k AAs then return is None)"""
@@ -378,3 +404,131 @@ def findpeptide(pep, seq, returnEnd = False):
         return startPos,endPos
     else:
         return startPos
+
+def grabOverlappingKmer(seq,sitei, pos = 0, k = 9):
+    """Grab the kmer from seq for which it is in the pos position at sitei
+    Return the gapped and non-gapped kmer
+
+    This is a generalization of grabKmer for pos = 0
+
+    If seq[sitei] is a gap then the non-gapped kmer is None.
+    If there are not enough non-gap AA to return before/after sitei then it returns None
+
+    Parameters
+    ----------
+    seq : str
+        Sequence from which peptide will be grabbed.
+    sitei : int
+        Key position of the kmer (zero-based indexing)
+    pos : int
+        The position of the key sitei in the kmer.
+    k : int
+        Length of the peptide to return.
+
+    Returns
+    -------
+    gapped : str
+        A k-length peptide that overlaps sitei
+    nonGapped : str
+        A k-length peptide that overlaps sitei
+        If seq[sitei] is a gap then returns None.
+        If not then all gaps are removed before taking the k-length peptide
+            (if there aren't k AAs then return is None)"""
+    aaRight = k - pos
+    aaLeft = pos
+    if seq[sitei] == '-':
+        return None,None
+
+    if (sitei + aaRight) <= len(seq) and (sitei - aaLeft) >= 0:
+        if pos<k:
+            rh = seq[sitei:]
+            fullRH = rh[:aaRight]
+            if '-' in fullRH:
+                ngRH = rh.replace('-','')
+                if len(ngRH) >= aaRight:
+                    ngRH = ngRH[:aaRight]
+                else:
+                    ngRH = None
+            else:
+                ngRH = fullRH
+        else:
+            fullRH = ''
+            ngRH = ''
+
+        if pos>0:
+            lh = seq[:sitei]
+            fullLH = lh[-aaLeft:]
+            if '-' in fullLH:
+                ngLH = lh.replace('-','')
+                if len(ngLH) >= aaLeft:
+                    ngLH = ngLH[-aaLeft:]
+                else:
+                    ngLH = None
+            else:
+                ngLH = fullLH
+        else:
+            fullLH = ''
+            ngLH = ''
+        full = fullLH + fullRH
+        #print aaLeft,fullLH,",", aaRight,fullRH
+
+        if ngLH is None or ngRH is None:
+            ng = None
+        else:
+            ng = ngLH + ngRH
+        return full,ng
+    else:
+        return None,None
+
+
+def overlappingMers(seq, sitei, nmer = [8, 9, 10, 11], padding = 0):
+    """Create a list of kmers that overlap sitei in seq
+
+    Returns parallel lists of the mers, start positions and lengths
+
+    Parameters
+    ----------
+    seq : str
+    sitei : int
+        Zero-based index into seq
+    nmer : list
+        Lengths of kmers to consider
+    padding : int
+        Allow kmer to be within padding.
+        Defalut is no padding (must overlap)
+
+    Returns
+    -------
+    mers : list
+        List of overlapping peptides
+    starti : list
+        List of start positions"""
+    
+    def _overlappingMersNoPadding(seq, sitei, nmer):
+        mers = []
+        starti = []
+        for k in nmer:
+            for posi in range(k):
+                ng = grabOverlappingKmer(seq, sitei, pos=posi, k=k)[1]
+                if not ng is None:
+                    mers.append(ng)
+                    starti.append(sitei-posi)
+                    #print sitei, posi, k, ng
+        mers,uniqi = np.unique(mers,return_index = True)
+        starti = np.array(starti)[uniqi]
+        return mers, starti
+
+    mers,starti = _overlappingMersNoPadding(seq, sitei, nmer = nmer)
+    if padding > 0:
+        for padi in (np.arange(padding) + 1):
+            for tmpSitei in [sitei+padi, sitei-padi]:
+                tmpMers, tmpStarti = _overlappingMersNoPadding(seq, tmpSitei, nmer)
+                mers = np.concatenate((mers,tmpMers))
+                starti = np.concatenate((starti,tmpStarti))
+    mers,uniqi = np.unique(mers,return_index = True)
+    starti = np.array(starti)[uniqi]
+    return mers,starti
+
+
+
+
