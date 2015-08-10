@@ -3,7 +3,7 @@ from functools import partial
 import itertools
 import numpy as np
 import pandas as pd
-
+from scipy import stats
 
 from helpers import *
 from predict import *
@@ -145,7 +145,7 @@ class hlaPredCache(dict):
         out.update({(h,pep):self[(h,pep)] for h,pep in itertools.product(hlas,peptides)})
         return out
 
-class TestCache(dict):
+class RandCache(dict):
     """Starts as an empty hlaPredCache.
     As predictions are requested, random predictions are added to the cache.
     The effect is that you have random consistent/repeatable predictions.
@@ -158,7 +158,7 @@ class TestCache(dict):
         self.repAsteriskPattern = re.compile('\*')
 
         self.predictionMethod = 'random'
-        self.name = 'TestCache'
+        self.name = 'RandCache'
         self.warn = False
 
     def __str__(self):
@@ -181,10 +181,11 @@ class TestCache(dict):
                 try:
                     val = dict.__getitem__(self, (hla, peptide))
                 except KeyError:
-                    dict.__setitem__(self, (hla,ptide), self._generateNewPrediction())
+                    dict.__setitem__(self, (hla,peptide), self._generateNewPrediction())
                     val = dict.__getitem__(self, (hla, peptide))
         return val
-
+    def _generateNewPrediction(self):
+        return np.abs(11 - stats.expon.rvs(0,1.5,size = 1))
     def getRand(self,key):
         """Here to preserve the interface, but does nothing functionally different"""
         return self.getItem(key, useRand = False)

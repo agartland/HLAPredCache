@@ -5,7 +5,7 @@ Python-based HLA:peptide binding prediction cache and IEDB-tool wrapper
 
 """
 
-from cache import hlaPredCache, TestCache
+from cache import hlaPredCache, RandCache
 from helpers import *
 import predict
 import iedb_src.predict_binding as iedb_predict

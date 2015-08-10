@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from cache import hlaPredCache
+from cache import hlaPredCache, RandCache
 from predict import iedbPredict
 from helpers import *
 
@@ -14,7 +14,7 @@ class TestHelpers(unittest.TestCase):
     def tearDown(self):
         pass
     def test_getmers(self):
-        mers = getMers(self.gag, nmers = [9])
+        mers = getMers(self.gag, nmer = [9])
         self.assertEqual(mers[0], 'MGARASVLS')
 
 class TestCache(unittest.TestCase):
@@ -50,7 +50,7 @@ class TestCache(unittest.TestCase):
         self.assertTrue(np.isnan(ba_slice[('A*0203','ASRKLGDRG')]))
     def test_add(self):
         ba = hlaPredCache()
-        mers = getMers(self.gag, nmers=[9])
+        mers = getMers(self.gag, nmer = [9])
         nAdded = ba.addPredictions('netmhcpan', ['A*2601', 'A*3201', 'A*0201'], mers)
         """This peptide is a known A*02 binder"""
         self.assertTrue(ba[('A*0201','SLYNTVATL')] < np.exp(6))
@@ -70,7 +70,7 @@ class TestIEDBWrap(unittest.TestCase):
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
         self.assertEqual(df['method'].iloc[0], 'RAND')
     def test_predict(self):
-        mers = getMers(self.gag, nmers = [9])
+        mers = getMers(self.gag, nmer = [9])
         df = iedbPredict(method = 'netmhcpan', hlas = self.hlas, peptides = mers[:10])
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
         self.assertEqual(df['method'].iloc[0], 'netmhcpan')
@@ -90,7 +90,7 @@ class TestIEDBWrap(unittest.TestCase):
     def test_netmhccons(self):
         self.method_test(method = 'netmhccons')
     def method_test(self,method):
-        mers = getMers(self.gag, nmers = [9])
+        mers = getMers(self.gag, nmer = [9])
         cols = ['pred','method','peptide','hla']
         df = iedbPredict(method = method, hlas = self.hlas, peptides = mers[:10])
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
@@ -99,6 +99,16 @@ class TestIEDBWrap(unittest.TestCase):
 class TestIEDBSrc(unittest.TestCase):
     pass
 
+class TestRandomCache(unittest.TestCase):
+    def test_init(self):
+        ba = RandCache()
+        self.assertEqual(str(ba),'RandCache (random)')
+    def test_get(self):
+        ba = RandCache()
+        self.assertEqual(len(ba), 0)
+        x = ba[('A*2601','MGPGQVLFR')]
+        self.assertEqual(x, ba[('A*2601','MGPGQVLFR')])
+        self.assertEqual(len(ba), 1)
 
 if __name__ == '__main__':
     unittest.main()
