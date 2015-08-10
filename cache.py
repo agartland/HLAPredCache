@@ -9,18 +9,13 @@ from helpers import *
 from predict import *
 
 class hlaPredCache(dict):
-    """
-    Load 8,9,10,11-mer binding affinities into a big dictionary
+    """Load 8,9,10,11-mer binding affinities into a big dictionary
     ba[(hla,peptide)]=9.1
 
     TODO:
-     (1) Add a random mode that would generate random predictions for
-         new epitope requests and then save them for consistency for future requests
-     (2) Improve handling of class I and class II epitopes (and core info)
-     (3) Integrate better with the prediction requester above
-
-    """
-    def __init__(self, baseFn = None, kmers = [8,9,10,11], warn = True, oldFile = False):
+     (1) Improve handling of class I and class II epitopes (and core info)
+     (2) Integrate better with the prediction requester above"""
+    def __init__(self, baseFn = None, kmers = [8,9,10,11], warn = True, oldFile = False, useRand = False):
         dict.__init__(self)
         self.repAsteriskPattern = re.compile('\*')
 
@@ -48,15 +43,17 @@ class hlaPredCache(dict):
         else:
             self.predictionMethod = ''
             self.name = ''
+
         self.warn = warn
-        self.useRand = False
+        self.useRand = useRand
+
     def __str__(self):
         return '%s (%s)' % (self.name,self.predictionMethod)
 
     def __getitem__(self, key):
         """Calls the getItem() method with default options"""
         return self.getItem(key)
-    def getItem(self,key,useRand=False):
+    def getItem(self, key, useRand = False):
         """Returns the requested prediction.
         First tries to return pred quickly, if not found then does minimal
         error checking for * in HLA or BADAA in mer.
@@ -68,7 +65,7 @@ class hlaPredCache(dict):
         
         if self.useRand or useRand:
             hla,pep = key
-            key = (hla,self.uPep[self.transMat[self.uPep.index(pep),self.uHLA.index(hla)]])
+            key = (hla, self.uPep[self.transMat[self.uPep.index(pep), self.uHLA.index(hla)]])
         try:
             """First, try to get the prediction the fastest way possible"""
             val = dict.__getitem__(self, key)
@@ -91,8 +88,8 @@ class hlaPredCache(dict):
                     val = np.nan
         return val
     def getRand(self,key):
-        return self.getItem(key,useRand=True)
-    def permutePeptides(self,seed=None):
+        return self.getItem(key, useRand = True)
+    def permutePeptides(self, seed = None):
         if not seed is None:
             np.random.seed(seed)
         uPep = list({k[1] for k in self.keys()})
@@ -127,7 +124,7 @@ class hlaPredCache(dict):
             self.update({(re.sub(self.repAsteriskPattern,'_',h),p):v for h,p,v in zip(resDf['hla'],resDf['peptide'],resDf['pred'])})
             nAdded = resDf.shape[0]
         return nAdded
-    def addPredictionValues(self,hlas,peptides,values):
+    def addPredictionValues(self, hlas, peptides, values):
         """Add predictions as hla, peptide and values without running any predictor
         (basically just a dict update)"""
         self.update({(re.sub(self.repAsteriskPattern,'_',h),p):v for h,p,v in zip(hlas,peptides,values)})
@@ -135,11 +132,11 @@ class hlaPredCache(dict):
         with open(fn,'w') as fh:
             for k,v in self.iteritems():
                 fh.write('%s,%s,%1.6f\n' % (k[0],k[1],v))
-    def addFromFile(self,fn):
+    def addFromFile(self, fn):
         """Add predictions from a file: hla,peptide,prediction
         Returns number of predictions added (all those in file w/o checking for duplicates)"""
-        predDf=pd.read_csv(fn,names=['hla','peptide','pred'],header=None)
-        self.update({(h,p):v for h,p,v in zip(predDf['hla'],predDf['peptide'],predDf['pred'])})
+        predDf = pd.read_csv(fn, names = ['hla', 'peptide', 'pred'], header = None)
+        self.update({(h,p):v for h,p,v in zip(predDf['hla'], predDf['peptide'], predDf['pred'])})
         return predDf.shape[0]
     def slice(self,hlas,peptides):
         """Return a new hlaPredCache() with a subset of the predictions,
@@ -148,4 +145,69 @@ class hlaPredCache(dict):
         out.update({(h,pep):self[(h,pep)] for h,pep in itertools.product(hlas,peptides)})
         return out
 
+class TestCache(dict):
+    """Starts as an empty hlaPredCache.
+    As predictions are requested, random predictions are added to the cache.
+    The effect is that you have random consistent/repeatable predictions.
+    
+    Good for testing code without actual predictions and for generating null
+    distributions (i.e. "noisy predictor null")"""
 
+    def __init__(self):
+        dict.__init__(self)
+        self.repAsteriskPattern = re.compile('\*')
+
+        self.predictionMethod = 'random'
+        self.name = 'TestCache'
+        self.warn = False
+
+    def __str__(self):
+        return '%s (%s)' % (self.name, self.predictionMethod)
+
+    def __getitem__(self, key):
+        """Calls the getItem() method with default options"""
+        return self.getItem(key)
+    def getItem(self, key, useRand = False):
+        """Returns the requested prediction."""
+        try:
+            """First, try to get the prediction"""
+            val = dict.__getitem__(self, key)
+        except KeyError:
+            hla,peptide = key
+            if not isvalidmer(peptide):
+                val = np.nan
+            else:
+                hla = re.sub(self.repAsteriskPattern, '_', hla)
+                try:
+                    val = dict.__getitem__(self, (hla, peptide))
+                except KeyError:
+                    dict.__setitem__(self, (hla,ptide), self._generateNewPrediction())
+                    val = dict.__getitem__(self, (hla, peptide))
+        return val
+
+    def getRand(self,key):
+        """Here to preserve the interface, but does nothing functionally different"""
+        return self.getItem(key, useRand = False)
+    def permutePeptides(self, seed = None):
+        """Here to preserve the interface, but does nothing functionally different"""
+    def __setitem__(self, key, val):
+        dict.__setitem__(self, key, val)
+    def addPredictions(self, method, hlas, peptides):
+        """Here to preserve the interface, but does nothing."""
+        pass
+    def addPredictionValues(self, hlas, peptides, values):
+        """Here to preserve the interface, but does nothing."""
+        pass
+    def dumpToFile(self, fn):
+        with open(fn,'w') as fh:
+            for k,v in self.iteritems():
+                fh.write('%s,%s,%1.6f\n' % (k[0],k[1],v))
+    def addFromFile(self, fn):
+        """Here to preserve the interface, but does nothing."""
+        pass
+    def slice(self, hlas, peptides):
+        """Return a new hlaPredCache() with a subset of the predictions,
+        identified by hlas and peptides"""
+        out = hlaPredCache(warn = self.warn)
+        out.update({(h,pep):self[(h,pep)] for h,pep in itertools.product(hlas,peptides)})
+        return out
