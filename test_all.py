@@ -65,7 +65,7 @@ class TestIEDBWrap(unittest.TestCase):
         self.hlas = ['A*0201', 'A*0203', 'B*5701', 'A*2402']
         self.methods = ['ann', 'comblib_sidney2008', 'consensus', 'IEDB_recommended', 'netmhcpan', 'smm', 'smmpmbec', 'pickpocket', 'netmhccons']
     def test_dummy(self):
-        mers = getMers(self.gag, nmers = [9])
+        mers = getMers(self.gag, nmer = [9])
         df = iedbPredict(method = 'RAND', hlas = self.hlas, peptides = mers[:10])
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
         self.assertEqual(df['method'].iloc[0], 'RAND')
