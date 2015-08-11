@@ -185,7 +185,7 @@ class RandCache(dict):
                     val = dict.__getitem__(self, (hla, peptide))
         return val
     def _generateNewPrediction(self):
-        return np.abs(11 - stats.expon.rvs(0,1.5,size = 1))
+        return np.abs(11 - stats.expon.rvs(0,1.5,size = 1))[0]
     def getRand(self,key):
         """Here to preserve the interface, but does nothing functionally different"""
         return self.getItem(key, useRand = False)
