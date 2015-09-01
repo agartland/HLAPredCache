@@ -1,10 +1,20 @@
 #!/usr/bin/env python
+"""
+IEDB HLA:peptide binding prediction with multi-processing.
+
+TODO:
+    (1) Peptide list gets read in for every HLA, but it should only be read
+        in once per worker (not such a bad problem)
+    (2) All predictions must fit in memory in a pd.DataFrame before being written to a file.
+"""
+
 import argparse
 import pandas as pd
 from multiprocessing import Pool
 from functools import partial
 import sys
 import logging
+import numpy as np
 
 sys.path.append('/home/agartlan/gitrepo/')
 from HLAPredCache.predict import iedbPredict
@@ -66,8 +76,12 @@ if __name__ ==  '__main__':
 
     """Remove None's"""
     outDf = pd.concat([r for r in result if not r is None], axis = 0)
-    
-    outDf.to_csv(args.out)
+
+    """Take the log of the prediction if neccessary."""
+    if outDf.pred.max() > 100:
+        outDf['pred'] = np.log(outDf.pred)
+
+    outDf.to_csv(args.out, index = False)
 
     if args.verbose:
         logging.info('Completed %d predictions (expected %d) and wrote to file %s', outDf.shape[0], len(hlas) * len(peptides), args.out)
