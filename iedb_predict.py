@@ -31,7 +31,15 @@ def predictHLA(h):
     with open(args.pep, 'r') as fh:
         peptides = [p.strip() for p in fh]
 
-    outDf = iedbPredict(args.method, [h], peptides)
+    try:
+        outDf = iedbPredict(args.method, [h], peptides)
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        #lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        #print ''.join('!! ' + line for line in lines)  # Log it or whatever here
+        logging.warning('Prediction with allele %s generated exception %s: %s', h, exc_type, exc_value)
+        return None
+
     if args.verbose:
         logging.info('Completed binding prediction for %s with %d peptides', h, len(peptides))
     return outDf
@@ -42,6 +50,9 @@ if __name__ ==  '__main__':
     with open(args.hla, 'r') as fh:
         hlas = [h.strip() for h in fh]
 
+    with open(args.pep, 'r') as fh:
+        peptides = [p.strip() for p in fh]
+
     if args.verbose:
         """Create console handler and set level to debug"""
         logging.basicConfig(level = logging.INFO, format = '%(levelname)s:%(asctime)s:%(message)s')
@@ -49,12 +60,14 @@ if __name__ ==  '__main__':
 
     if args.cpus > 1:
         pool = Pool(processes = args.cpus)
-        result = pool.map(predictHLA, [h for h in hlas])
+        result = pool.map(predictHLA, hlas)
     else:
-        result = map(predictHLA, [h for h in hlas])
+        result = map(predictHLA, hlas)
 
-    outDf = pd.concat(result, axis = 0)
+    """Remove None's"""
+    outDf = pd.concat([r for r in result if not r is None], axis = 0)
+    
     outDf.to_csv(args.out)
 
     if args.verbose:
-        logging.info('Completed %d predictions and wrote to file %s', outDf.shape[0], args.out)
+        logging.info('Completed %d predictions (expected %d) and wrote to file %s', outDf.shape[0], len(hlas) * len(peptides), args.out)
