@@ -36,7 +36,6 @@ def iedbPredict(method,hlas,peptides):
     else:
         resDf = None
         for h in hlas:
-
             tmp = iedb_predict.Prediction().predict(method,convertHLAToIEDB(h), peptides)
             if resDf is None:
                 resDf = tmp
