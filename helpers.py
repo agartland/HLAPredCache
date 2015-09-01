@@ -299,7 +299,7 @@ def grabKmer(seq, starti, k = 9):
         tmp = seq[starti:]
         full = tmp[:k]
         if full[0] == '-':
-            out = (None, None)
+            return None,None
         elif '-' in full:
             ng = tmp.replace('-','')
             if len(ng) >= k:
@@ -308,10 +308,9 @@ def grabKmer(seq, starti, k = 9):
                 ng = None
         else:
             ng = full
-        out = (full, ng)
+        return full,ng
     else:
-        out = (None, None)
-    return out
+        return None,None
 
 def grabKmerInds(seq, starti, k = 9):
     """Grab the kmer from seq starting at position starti with length k
@@ -348,7 +347,7 @@ def grabKmerInds(seq, starti, k = 9):
         full = tmp[:k]
         """If it starts with a gap then it is invalid (arbitary rule)"""
         if seq[starti] == '-':
-            out = (None, None)
+            return None,None
         elif '-' in seq[starti:starti+k]:
             """If there's a gap somewhere else then go through one by one adding non-gapped indices"""
             ng = []
@@ -359,14 +358,13 @@ def grabKmerInds(seq, starti, k = 9):
                 if len(ng) == k:
                     return full,ng
             """If we get to then end of the seq then return ng=None"""
-            out = (full, None)
+            return full,None
         else:
             """If there are no gaps anywhere then just return k indices starting with starti"""
-            out = (full, full)
+            return full,full
     else:
         """If its an invalid request then return None,None"""
-        out = (None, None)
-    return out
+        return None,None
 
 def findpeptide(pep, seq, returnEnd = False):
     """Find pep in seq ignoring gaps but returning a start position that counts gaps
@@ -386,6 +384,7 @@ def findpeptide(pep, seq, returnEnd = False):
     -------
     startPos : int
         Start position (zero-indexed) of pep in seq or -1 if not found"""
+
     ng = seq.replace('-','')
     ngInd = ng.find(pep)
     ngCount = 0
@@ -411,7 +410,7 @@ def findpeptide(pep, seq, returnEnd = False):
     else:
         return startPos
 
-def grabOverlappingKmer(seq, sitei, pos = 0, k = 9):
+def grabOverlappingKmer(seq,sitei, pos = 0, k = 9):
     """Grab the kmer from seq for which it is in the pos position at sitei
     Return the gapped and non-gapped kmer
 
