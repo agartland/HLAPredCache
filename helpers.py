@@ -232,7 +232,7 @@ def getMers(seq, nmer = [8, 9 , 10, 11], seqLength = None):
         mers.extend([seq[i:i+n] for i in range(len(seq)-n+1)])
     return mers
 
-def getMerInds(seq, nmer = [8, 9 , 10, 11], seqLength = None):
+def getMerInds(seq, nmer=[8, 9 , 10, 11], seqLength=None):
     """Takes a AA sequence (string) and turns it into a list of 8, 9, 10, 11 mers
     
     The seq will be padded with one or more '.' if it is shorter than seqLength
@@ -354,7 +354,7 @@ def grabKmer(seq, starti, k=9):
     else:
         return None,None
 
-def grabKmerInds(seq, starti, k = 9):
+def grabKmerInds(seq, starti, k=9):
     """Grab the kmer from seq starting at position starti with length k
     Return the indices of the gapped and non-gapped kmers
 
@@ -378,9 +378,9 @@ def grabKmerInds(seq, starti, k = 9):
         A k-length vector starting with starti containing the indices for the kmer
     nonGapped : ndarray
         A k-length vector starting at starti.
-        If seq[starti] is a gap then returns None.
+        If seq[starti] is a gap then returns an empty array.
         If not then all gaps are removed before taking the k-length peptide
-            (if there aren't k AAs then return is None)"""
+            (if there aren't k AAs then return is an empty array)"""
     if not isinstance(starti,int):
         starti = int(starti)
 
@@ -389,7 +389,7 @@ def grabKmerInds(seq, starti, k = 9):
         full = tmp[:k]
         """If it starts with a gap then it is invalid (arbitary rule)"""
         if seq[starti] == '-':
-            return None,None
+            return np.empty(0),np.empty(0)
         elif '-' in seq[starti:starti+k]:
             """If there's a gap somewhere else then go through one by one adding non-gapped indices"""
             ng = []
@@ -398,15 +398,15 @@ def grabKmerInds(seq, starti, k = 9):
                     ng.append(sitei)
                 """If we get to k non-gapped AAs then return full,ng"""
                 if len(ng) == k:
-                    return full,ng
+                    return full, np.array(ng)
             """If we get to then end of the seq then return ng=None"""
-            return full,None
+            return full,np.empty(0)
         else:
             """If there are no gaps anywhere then just return k indices starting with starti"""
             return full,full
     else:
         """If its an invalid request then return None,None"""
-        return None,None
+        return np.empty(0),np.empty(0)
 
 def findpeptide(pep, seq, returnEnd = False):
     """Find pep in seq ignoring gaps but returning a start position that counts gaps
