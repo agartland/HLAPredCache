@@ -267,7 +267,49 @@ def getMerInds(seq, nmer = [8, 9 , 10, 11], seqLength = None):
         inds.extend([np.arange(n)+i for i in range(len(seq)-n+1)])
     return mers,inds
 
-def grabKmer(seq, starti, k = 9):
+def itermer(seq, k=9, gapped=True, yield_inds=False):
+    """Generator over all k-mers in seq.
+    There are [len(seq) - k + 1] k-mers in seq.
+
+    Parameters
+    ----------
+    seq : str
+        Sequence which will be broken into kmers.
+    k : int
+        Length of peptides to return.
+    gapped : bool
+        If True (default), yield the k-mer including gaps.
+        If False,  yield the "non-gapped" k-mer from grabKmer
+    return_inds : bool
+        If True, also yield an array of indices from grabKmerInds
+
+    Yields
+    ------
+    mer : str
+        If gapped, then a k-length peptide starting at starti from seq.
+        If seq[starti] is a gap then returns None.
+        If not gapped then all gaps are removed before taking the k-length peptide
+            (if there aren't k AAs then return is None)
+    inds : nd.array (optional)
+        An array of indices for the mer"""
+
+    for i in range(len(seq) - k + 1):
+        g,ng = grabKmer(seq, i, k=k)
+        if gapped:
+            mer = g
+        else:
+            mer = ng
+        if yield_inds:
+            ginds,nginds = grabKmerInds(seq, i, k=k)
+            if gapped:
+                inds = ginds
+            else:
+                inds = nginds
+            yield (mer,inds)
+        else:
+            yield (mer,)
+
+def grabKmer(seq, starti, k=9):
     """Grab the kmer from seq starting at position starti with length k
     Return the gapped and non-gapped kmer
 
