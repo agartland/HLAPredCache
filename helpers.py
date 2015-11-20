@@ -19,7 +19,7 @@ __all__ = ['BADAA',
             'grabOverlappingKmer',
             'overlappingMers']
 
-BADAA = '-*BX#Z'
+BADAA = '-*BX#Z? '
 AALPHABET = 'ACDEFGHIKLMNPQRSTVWY'
 
 
@@ -34,8 +34,8 @@ def isvalidmer(mer):
     else:
         return False
 
-def isvalidHLA(h):
-    if h[0] in 'AB':
+def isvalidHLA(h, loci='AB'):
+    if h[0] in loci:
         return True
     else:
         return False

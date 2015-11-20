@@ -2,16 +2,17 @@
 """
 IEDB HLA:peptide binding prediction with multi-processing.
 
+Example:
+./iedb_predict.py --method netmhcpan --pep data/test.9.mers --hla data/test.my.hla --out data/test.9.out2 --verbose --cpus 4
+
 TODO:
-    (1) Peptide list gets read in for every HLA, but it should only be read
-        in once per worker (not such a bad problem)
-    (2) All predictions must fit in memory in a pd.DataFrame before being written to a file.
+    (1) All predictions must fit in memory in a pd.DataFrame before being written to a file.
 """
 
 import argparse
 import pandas as pd
 from multiprocessing import Pool
-from functools import partial
+import parmap
 import sys
 import logging
 import numpy as np
@@ -35,25 +36,41 @@ def parseArgs():
     args = parser.parse_args()
     return args
 
-def predictHLA(h):
-    args = parseArgs()
-
-    with open(args.pep, 'r') as fh:
-        peptides = [p.strip() for p in fh]
-
+def predictHLA(h, method, peptides, verbose):
     try:
-        outDf = iedbPredict(args.method, [h], peptides)
+        outDf = iedbPredict(method, [h], peptides)
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        #lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        #print ''.join('!! ' + line for line in lines)  # Log it or whatever here
         logging.warning('Prediction with allele %s generated exception %s: %s', h, exc_type, exc_value)
         return None
 
-    if args.verbose:
+    if verbose:
         logging.info('Completed binding prediction for %s with %d peptides', h, len(peptides))
     return outDf
 
+def generatePredictions(method, hlas, peptides, cpus=1, verbose=False):
+    """Does not work because peptides is also an iterator...."""
+    if verbose:
+        """Create console handler and set level to debug"""
+        logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(asctime)s:%(message)s')
+        logging.info('HLA prediction initialized for %d HLA allele(s) using method %s on %d CPU(s)', len(hlas), method, cpus)
+
+    if cpus > 1:
+        result = parmap.map(predictHLA, hlas, method, peptides, verbose, pool=Pool(processes=cpus))
+    else:
+        result = parmap.map(predictHLA, hlas, method, peptides, verbose, parallel=False)
+
+    """Remove None's"""
+    outDf = pd.concat([r for r in result if not r is None], axis=0)
+
+    """Take the log of the prediction if neccessary."""
+    if outDf.pred.max() > 100:
+        outDf['pred'] = np.log(outDf.pred)
+
+    if verbose:
+        logging.info('Completed %d predictions (expected %d)', outDf.shape[0], len(hlas) * len(peptides))
+    return outDf
+   
 if __name__ ==  '__main__':
     args = parseArgs()
 
@@ -63,25 +80,8 @@ if __name__ ==  '__main__':
     with open(args.pep, 'r') as fh:
         peptides = [p.strip() for p in fh]
 
-    if args.verbose:
-        """Create console handler and set level to debug"""
-        logging.basicConfig(level = logging.INFO, format = '%(levelname)s:%(asctime)s:%(message)s')
-        logging.info('HLA prediction initialized for %d HLA allele(s) using method %s on %d CPU(s)', len(hlas), args.method, args.cpus)
-
-    if args.cpus > 1:
-        pool = Pool(processes = args.cpus)
-        result = pool.map(predictHLA, hlas)
-    else:
-        result = map(predictHLA, hlas)
-
-    """Remove None's"""
-    outDf = pd.concat([r for r in result if not r is None], axis = 0)
-
-    """Take the log of the prediction if neccessary."""
-    if outDf.pred.max() > 100:
-        outDf['pred'] = np.log(outDf.pred)
-
-    outDf.to_csv(args.out, index = False)
+    predDf = generatePredictions(args.method, hlas, peptides, cpus=args.cpus, verbose=args.verbose)
+    predDf.to_csv(args.out, index=False)
 
     if args.verbose:
-        logging.info('Completed %d predictions (expected %d) and wrote to file %s', outDf.shape[0], len(hlas) * len(peptides), args.out)
+        logging.info('Wrote %d predictions to file %s', predDf.shape[0], args.out)

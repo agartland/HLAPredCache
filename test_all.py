@@ -74,6 +74,11 @@ class TestIEDBWrap(unittest.TestCase):
         df = iedbPredict(method = 'netmhcpan', hlas = self.hlas, peptides = mers[:10])
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
         self.assertEqual(df['method'].iloc[0], 'netmhcpan')
+    def test_parallel_predict(self):
+        mers = getMers(self.gag, nmer = [9])
+        df = iedbPredict(method='netmhcpan', hlas=self.hlas, peptides=mers[:10], cpus=2)
+        self.assertEqual(df.shape[0], len(self.hlas) * 10)
+        self.assertEqual(df['method'].iloc[0], 'netmhcpan')
     def test_ann(self):
         self.method_test(method = 'ann')
     def test_comblib_sidney2008(self):
@@ -90,9 +95,9 @@ class TestIEDBWrap(unittest.TestCase):
     def test_netmhccons(self):
         self.method_test(method = 'netmhccons')
     def method_test(self,method):
-        mers = getMers(self.gag, nmer = [9])
+        mers = getMers(self.gag, nmer=[9])
         cols = ['pred','method','peptide','hla']
-        df = iedbPredict(method = method, hlas = self.hlas, peptides = mers[:10])
+        df = iedbPredict(method=method, hlas=self.hlas, peptides=mers[:10])
         self.assertEqual(df.shape[0], len(self.hlas) * 10)
         self.assertEqual(df['method'].iloc[0], method)
         self.assertTrue(np.all([c in df.columns for c in cols]))
