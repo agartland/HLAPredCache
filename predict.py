@@ -4,6 +4,7 @@ import itertools
 from multiprocessing import Pool
 import parmap
 import logging
+import sys
 
 import iedb_src.predict_binding as iedb_predict
 

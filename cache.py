@@ -102,8 +102,10 @@ class hlaPredCache(dict):
 
     def __setitem__(self, key, val):
         dict.__setitem__(self, key, val)
-    def addPredictions(self, method, hlas, peptides):
+    def addPredictions(self, method, hlas, peptides, cpus=1, verbose=False):
         """Run all neccessary predictions and add results to the cache without updating existing predictions
+        Will batch peptides of each length.
+        Will attempt to remove invalid peptides.
         Returns number of predictions added (counting only those that were new to the cache)"""
         if self.predictionMethod == '':
             self.predictionMethod = method
@@ -116,13 +118,19 @@ class hlaPredCache(dict):
             if not self.has_key((h,pep)):
                 neededHLAs.add(h)
                 neededPeptides.add(pep)
+
         hlas = list(neededHLAs)
-        peptides = list(neededPeptides)
-        nAdded = 0
-        if len(hlas) > 0 or len(peptides) > 0:
-            resDf = iedbPredict(method,hlas,peptides)
-            self.update({(re.sub(self.repAsteriskPattern,'_',h),p):v for h,p,v in zip(resDf['hla'],resDf['peptide'],resDf['pred'])})
-            nAdded = resDf.shape[0]
+        """Remove bad peptides"""
+        mers = [m for m in neededPeptides if isvalidmer(m)]
+
+        kmers = {k: [m for m in mers if len(m)==k] for k in [8,9,10,11,12,13,14,15]}
+
+        for k in kmers.keys():
+            nAdded = 0
+            if len(hlas) > 0 and len(kmers[k]) > 0:
+                resDf = iedbPredict(method, hlas, kmers[k], cpus=cpus, verbose=verbose)
+                self.update({(re.sub(self.repAsteriskPattern,'_',h),p):v for h,p,v in zip(resDf['hla'],resDf['peptide'],resDf['pred'])})
+                nAdded += resDf.shape[0]
         return nAdded
     def addPredictionValues(self, hlas, peptides, values):
         """Add predictions as hla, peptide and values without running any predictor
