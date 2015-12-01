@@ -96,7 +96,7 @@ def rankEpitopes(ba, hlaList, peptide, nmer = [8,9,10,11], peptideLength = None)
     ranks[sorti] = np.arange(len(ic50))
     return (ranks,sorti,kmers,ic50,hla)
 
-def rankKmers(ba, hlaList, peptide, nmer = [8,9,10,11], peptideLength = None):
+def rankKmers(ba, hlaList, peptide, nmer=[8,9,10,11], peptideLength=None):
     """Breaks peptide into kmers (all nmer lengths)
     and rank all (hla, kmer) pairs by predicted IC50 in hlaPredCache ba
 
@@ -175,7 +175,7 @@ def rankMers(ba, hlaList, merList):
     ranks[sorti] = np.arange(len(ic50))
     return (ranks,sorti,ic50,hla)
 
-def getIC50(ba, hlaList, mer, nmer = [8,9,10,11]):
+def getIC50(ba, hlaList, mer, nmer=[8,9,10,11], returnHLA=False):
     """Return the IC50 from ba of the mer and its affinity with the most avid HLA in hlaList.
     Or if len(pep)>11, return that of the most avid kmer
 
@@ -188,20 +188,37 @@ def getIC50(ba, hlaList, mer, nmer = [8,9,10,11]):
     mer : string
         Peptide sequences to be tests with each HLA allele
     nmer : list
-        Integers indicating optimal lengths to be tested as kmers."""
+        Integers indicating optimal lengths to be tested as kmers.
+    returnHLA : bool
+        If True, return the HLA with the lowest binding affinity.
+
+    Returns
+    -------
+    ic50 : float
+        Log-IC50 from ba
+    hla : string (optional)
+        HLA allele with best binding"""
 
     if ba is None:
         raise NameError('Did not load IC50 values into ba!')
-    #minimum IC50 over the HLAs
+    
     if len(mer) <= 11:
-        allPairs = [(ba[(h,mer)],h,mer) for h in hlaList]
-    #minimum IC50 over all the mers and all the HLAs
+        """Minimum IC50 over the HLAs"""
+        ic50s = np.asarray([ba[(h,mer)] for h in hlaList])
+        hlas = hlaList
     else:
-        allPairs = [getIC50(ba,hlaList,m) for m in getMers(mer,nmer)]
-    return min(allPairs, key = lambda x: x[0])
+        """Minimum IC50 over all the mers and all the HLAs"""
+        pairs = [getIC50(ba,hlaList,m, returnHLA=True) for m in getMers(mer,nmer)]
+        ic50s = np.asarray([p[0] for p in pairs])
+        hlas = [p[1] for p in pairs]
 
+    mini = np.argmin(ic50s)
+    if returnHLA:
+        return ic50s[mini], hlas[mini]
+    else:
+        return ic50s[mini]
 
-def getMers(seq, nmer = [8, 9 , 10, 11], seqLength = None):
+def getMers(seq, nmer=[8, 9 , 10, 11], seqLength=None):
     """Takes a AA sequence (string) and turns it into a list of 8, 9, 10, 11 mers
     
     The seq will be padded with one or more '.' if it is shorter than seqLength
@@ -452,7 +469,7 @@ def findpeptide(pep, seq, returnEnd = False):
     else:
         return startPos
 
-def grabOverlappingKmer(seq,sitei, pos = 0, k = 9):
+def grabOverlappingKmer(seq, sitei, pos=0, k=9):
     """Grab the kmer from seq for which it is in the pos position at sitei
     Return the gapped and non-gapped kmer
 
