@@ -411,13 +411,14 @@ class NetMHCpanPredictor:
     
     def predict_peptide_list(self, peptide_list):
         '''This routine can be directly called so that you do not make a file for each prediction.'''
+        
         infile=tempfile.NamedTemporaryFile(prefix=self.path_scratch, suffix='input')
         infile.close()
         infile = open(infile.name, "w")
         for peptide in peptide_list:
             infile.write(peptide + "\n")
         infile.close()
-
+        
         usermhcfile = tempfile.NamedTemporaryFile(prefix=self.path_scratch, suffix='usermhc')
         usermhcfile.close()
         
@@ -435,13 +436,15 @@ class NetMHCpanPredictor:
             usermhcfile = open(usermhcfile.name, "wb")
             usermhcfile.write(usermhc)
             usermhcfile.close()
-            
+        # Added by AFG on Feb 16, 2017: not sure whythis was needed today, but it works now
+        tmpdirCMD = ' -tdir ' + os.path.join(self.path_scratch, 'tmp')        
         if self.hla_seq is None:
-            cmd = self.path_executable + ' -p ' + infile.name + ' -ic50 -a ' + self.mhc + ' -l ' + str(self.length)
+            cmd = self.path_executable + ' -p ' + infile.name + ' -ic50 -a ' + self.mhc + ' -l ' + str(self.length) + tmpdirCMD
         else:
-            cmd = self.path_executable + ' -p ' + infile.name  + ' -hlaseq ' + usermhcfile.name + ' -l ' + str(self.length)
+            cmd = self.path_executable + ' -p ' + infile.name  + ' -hlaseq ' + usermhcfile.name + ' -l ' + str(self.length) + tmpdirCMD
         
         f = os.popen(cmd)
+        
         content = f.readlines()
         scores = self.parse_netmhcpan(content)
         pid = f.close()

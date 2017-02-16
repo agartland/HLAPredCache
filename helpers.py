@@ -165,13 +165,13 @@ def rankMers(ba, hlaList, merList):
     hla : ndarray object
         Array of HLA alleles that were the best predicted binder to each kmer"""
 
-    ic50 = np.ones((len(merList)))*15
+    ic50 = np.ones((len(merList))) * 15
     hla = np.empty(len(merList), dtype=object)
     for i,m in enumerate(merList):
         if not '.' in m:
-            ic50[i],hla[i],dumpmer = getIC50(ba, hlaList, m)
+            ic50[i],hla[i] = getIC50(ba, hlaList, m, returnHLA=True)
     sorti = ic50.argsort()
-    ranks = np.empty(len(ic50), int)
+    ranks = np.empty(len(ic50), dtype=int)
     ranks[sorti] = np.arange(len(ic50))
     return (ranks,sorti,ic50,hla)
 
