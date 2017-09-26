@@ -1,7 +1,7 @@
 import os
 import math, tempfile, bisect
 
-from util import * #@UnusedWildImport
+from .util import * #@UnusedWildImport
 
 class PredictorSet(object):
     '''A set of predictors. An appropriate set of predictors should be loaded for each version.'''
@@ -43,14 +43,13 @@ class PredictorSet(object):
         return predictor
 
     def get_method_name_list(self):
-        key_list = self.dic_predictor.keys()
-        key_list.sort()
+        key_list = sorted(list(self.dic_predictor.keys()))
         return key_list
 
     def get_predictor_list(self, method_list):
         predictor_list = []
         for method in method_list:
-            if (self.dic_predictor.has_key(method) == True):
+            if ((method in self.dic_predictor) == True):
                 predictor = self.dic_predictor[method]
                 predictor_list.append(predictor)
         return predictor_list
@@ -101,7 +100,7 @@ class ARBMatrix(object):
             score/=-self.length
             score-=self.intercept
             score/=self.slope
-            score=math.pow(10,score)
+            score=math.pow(10, score)
             if score < 0.0001:    # Cap predictable values
                 score = 0.0001
             elif score > 1e6:
@@ -123,20 +122,20 @@ class ARBMatrix(object):
                 raise PredictorError("Invalid number of columns in ARB matrix: " + str(len(numbers)), " expected: " + str(self.length) + ".")
             self.mat[line[0]]=tuple(numbers)
         p = infile.find("SLOPE")
-        self.slope = float(infile[p + 5:infile.find("\n",p+1)])
+        self.slope = float(infile[p + 5:infile.find("\n", p+1)])
         p = infile.find("INTERCEPT")
-        self.intercept = float(infile[p + 9:infile.find("\n",p+1)])
+        self.intercept = float(infile[p + 9:infile.find("\n", p+1)])
 
     def pickle_dump(self, file_name):
-        fout=open(file_name,"wb")
+        fout=open(file_name, "wb")
         cPickle.dump(self.length, fout)
-        cPickle.dump(self.mat,fout)
-        cPickle.dump(self.slope,fout)
-        cPickle.dump(self.intercept,fout)
+        cPickle.dump(self.mat, fout)
+        cPickle.dump(self.slope, fout)
+        cPickle.dump(self.intercept, fout)
         fout.close()
 
     def pickle_load(self, file_name):
-        fin = open(file_name,"rb")
+        fin = open(file_name, "rb")
         self.length = cPickle.load(fin)
         self.mat = cPickle.load(fin)
         self.slope = cPickle.load(fin)
@@ -173,10 +172,10 @@ class SMMMatrix:
         scores = self.predict_peptide_list(peptide_list)
         
         #get percentile scores
-        args = ('smm', self.mhc.replace("*",""), self.length)
+        args = ('smm', self.mhc.replace("*", ""), self.length)
         ps = PercentileScore(os.path.dirname(self.path_data), 'consensus', args)
         percentile = ps.get_percentile_score(scores)
-        return zip(scores, percentile)
+        return list(zip(scores, percentile))
 
     def predict_peptide_list(self, peptide_list):
         scores=[]
@@ -188,7 +187,7 @@ class SMMMatrix:
                     score+=self.mat[amino_acid][pos]
                 except:
                     raise PredictorError("""Invalid character '%c' in sequence '%s'.""" % (amino_acid, peptide))
-            score=math.pow(10,score)
+            score=math.pow(10, score)
             scores.append(score)
         return (tuple(scores))
 
@@ -216,14 +215,14 @@ class SMMMatrix:
         outfile.write(str(self.offset))
 
     def pickle_dump(self, file_name):
-        fout = open(file_name,"wb")
+        fout = open(file_name, "wb")
         cPickle.dump(self.length, fout)
-        cPickle.dump(self.mat,fout)
-        cPickle.dump(self.offset,fout)
+        cPickle.dump(self.mat, fout)
+        cPickle.dump(self.offset, fout)
         fout.close()
 
     def pickle_load(self, file_name):
-        fin = open(file_name,"rb")
+        fin = open(file_name, "rb")
         self.length = cPickle.load(fin)
         self.mat = cPickle.load(fin)
         self.offset = cPickle.load(fin)
@@ -237,7 +236,7 @@ class ANNPredictor:
         self.path_data = os.path.join(path_data, 'ann')
 
     def initialize(self, mhc, length):
-        self.mhc = mhc.replace("*","")
+        self.mhc = mhc.replace("*", "")
         self.length = length
 
     def get_score_unit(self):
@@ -246,15 +245,15 @@ class ANNPredictor:
 
     def predict_sequence(self,sequence,pred,peptideList=False):
         '''Given one protein sequence, break it up into peptides, return their predicted binding scores.'''
-        scores = self.predict_peptide_list(sequence,peptideList)
+        scores = self.predict_peptide_list(sequence, peptideList)
         
         #get percentile scores
-        args = ('ann', self.mhc.replace("*",""), self.length)
+        args = ('ann', self.mhc.replace("*", ""), self.length)
         ps = PercentileScore(os.path.dirname(self.path_data), 'consensus', args)
         percentile = ps.get_percentile_score(scores)
-        return zip(scores, percentile)
+        return list(zip(scores, percentile))
 
-    def predict_peptide_list(self, peptide_list,peptideList):
+    def predict_peptide_list(self, peptide_list, peptideList):
         '''This routine can be directly called so that you do not make a file for each prediction.'''
         infile = tempfile.NamedTemporaryFile(prefix=self.path_data+'/', suffix='input')
         if not peptideList:
@@ -303,7 +302,7 @@ class NetMHCpanPredictor:
     
     def read_score_distributions(self):
         fname = os.path.join(self.path_data, 'netmhcpan', 'distribution_netmhcpan_2_8_bin.cpickle')
-        f=open(fname,'r')
+        f=open(fname, 'r')
         dic = cPickle.load(f)
         f.close()
         return dic
@@ -313,11 +312,11 @@ class NetMHCpanPredictor:
             mhc = temp_mhc
         else:
             if re.search("HLA.*", temp_mhc):
-                mhc = temp_mhc.replace("*","")
+                mhc = temp_mhc.replace("*", "")
             elif re.search("SLA.*", temp_mhc) or re.search("Mamu.*", temp_mhc) or re.search("BoLA.*", temp_mhc):
-                mhc = temp_mhc.replace("*",":")
+                mhc = temp_mhc.replace("*", ":")
             else:
-                mhc = temp_mhc.replace("*","")
+                mhc = temp_mhc.replace("*", "")
         return mhc
 
     def isReal(self, num):
@@ -338,7 +337,7 @@ class NetMHCpanPredictor:
                     if re.search("USER_DEF", data_list[1]):
                         peptide = data_list[2]
                         binding_affinity = float(data_list[4])
-                        IC50_score = math.pow(50000,(1-binding_affinity))
+                        IC50_score = math.pow(50000, (1-binding_affinity))
                         scores.append(IC50_score)
                     else:
                         IC50_score = float(data_list[5])
@@ -362,7 +361,7 @@ class NetMHCpanPredictor:
             	
             	# TODO: avoid search/replace, retrieve from the database instead 
                 if re.search("SLA.*", self.mhc) or re.search("BoLA.*", self.mhc):
-                    self.mhc = self.mhc.replace(":","_")
+                    self.mhc = self.mhc.replace(":", "_")
                     
                 key = ('netmhcpan', self.mhc, self.length)
                 self.dic_score_distributions = self.read_score_distributions()
@@ -483,9 +482,9 @@ class PickPocketPredictor:
             mhc = temp_mhc
         else:
             if re.search("SLA.*", temp_mhc) or re.search("Mamu.*", temp_mhc):
-                mhc = temp_mhc.replace("*",":")
+                mhc = temp_mhc.replace("*", ":")
             else:
-                mhc = temp_mhc.replace("*","")
+                mhc = temp_mhc.replace("*", "")
         return mhc
 # 
     def transform_score(self, x):
@@ -494,9 +493,9 @@ class PickPocketPredictor:
         aff = 50000^(-(score - 1))'''
         ba = float(x)
         try:
-            ic50 = math.pow(50000,(1-ba))
+            ic50 = math.pow(50000, (1-ba))
         except:
-            print 'EXCEPTION, math error, x', x
+            print('EXCEPTION, math error, x', x)
         return ic50
 #     
 
@@ -511,7 +510,7 @@ class PickPocketPredictor:
                     if re.search("USER_DEF", data_list[1]):
                         peptide = data_list[2]
                         binding_affinity = float(data_list[4])
-                        IC50_score = math.pow(50000,(1-binding_affinity))
+                        IC50_score = math.pow(50000, (1-binding_affinity))
                         scores.append(IC50_score)
                     else:
                         IC50_score = self.transform_score(data_list[4])
@@ -530,16 +529,16 @@ class PickPocketPredictor:
         
         if self.mhc != 'User defined':
             if re.search("BoLA.*", self.mhc) or re.search("Mamu.*", self.mhc):
-                args = ('pickpocket', self.mhc.replace(":","_"), self.length)
+                args = ('pickpocket', self.mhc.replace(":", "_"), self.length)
             elif re.search("SLA.*", self.mhc):
                 key_mhc = re.sub(r'(SLA-\d)(:)(.+)', r'\1_\3', self.mhc)
                 key_mhc = re.sub(r'(SLA-\d)(-)(.+)', r'\1\3', key_mhc)
                 args = ('pickpocket', key_mhc, self.length)
             else:
-                args = ('pickpocket', self.mhc.replace("*",""), self.length)
+                args = ('pickpocket', self.mhc.replace("*", ""), self.length)
             ps = PercentileScore(self.path_data, 'pickpocket', args)
             percentile = ps.get_percentile_score(scores)
-            return zip(scores, percentile)
+            return list(zip(scores, percentile))
         else:
             return scores
     
@@ -616,9 +615,9 @@ class NetMHCconsPredictor:
             mhc = temp_mhc
         else:
             if re.search("SLA.*", temp_mhc) or re.search("Mamu.*", temp_mhc):
-                mhc = temp_mhc.replace("*",":")
+                mhc = temp_mhc.replace("*", ":")
             else:
-                mhc = temp_mhc.replace("*","")
+                mhc = temp_mhc.replace("*", "")
         return mhc
 
     def parse_pickpocket(self, content):
@@ -642,16 +641,16 @@ class NetMHCconsPredictor:
         
         if self.mhc != 'User defined':
             if re.search("BoLA.*", self.mhc) or re.search("Mamu.*", self.mhc):
-                args = ('pickpocket', self.mhc.replace(":","_"), self.length)
+                args = ('pickpocket', self.mhc.replace(":", "_"), self.length)
             elif re.search("SLA.*", self.mhc):
                 key_mhc = re.sub(r'(SLA-\d)(:)(.+)', r'\1_\3', self.mhc)
                 key_mhc = re.sub(r'(SLA-\d)(-)(.+)', r'\1\3', key_mhc)
                 args = ('pickpocket', key_mhc, self.length)
             else:
-                args = ('pickpocket', self.mhc.replace("*",""), self.length)
+                args = ('pickpocket', self.mhc.replace("*", ""), self.length)
             ps = PercentileScore(self.path_data, 'pickpocket', args)
             percentile = ps.get_percentile_score(scores)
-            return zip(scores, percentile)
+            return list(zip(scores, percentile))
         else:
             return scores
         
@@ -727,9 +726,9 @@ class CombinatorialLibrary:
         self.length = length
         if re.search('H-2.*', self.mhc):
             i = re.search('(?<=\d)', self.mhc).start()
-            key = (self.mhc[:i]+self.mhc[i:].replace("-","_"), self.length)
+            key = (self.mhc[:i]+self.mhc[i:].replace("-", "_"), self.length)
         else:
-            key = (self.mhc.replace('-','_').replace('*','-').replace(':',''), self.length)
+            key = (self.mhc.replace('-', '_').replace('*', '-').replace(':', ''), self.length)
         
         w = self.dic_pssm[key]
         (self.mat, self.offset) = self.get_dic_mat(w)
@@ -747,10 +746,10 @@ class CombinatorialLibrary:
         scores = self.predict_peptide_list(peptide_list)
         
         #get percentile scores
-        args = ('comblib_sidney2008', self.mhc.replace("*",""), self.length)
+        args = ('comblib_sidney2008', self.mhc.replace("*", ""), self.length)
         ps = PercentileScore(self.path_data, 'consensus', args)
         percentile = ps.get_percentile_score(scores)
-        return zip(scores, percentile)
+        return list(zip(scores, percentile))
 
     def predict_peptide_list(self, peptide_list):
         scores = []
@@ -762,12 +761,12 @@ class CombinatorialLibrary:
                     score += self.mat[amino_acid][pos]
                 except:
                     raise PredictorError("""Invalid character '%c' in sequence '%s'.""" % (amino_acid, peptide))
-            score = math.pow(10,score)
+            score = math.pow(10, score)
             scores.append(score)
         return (tuple(scores))
 
-    def read_data_cpickle(self,fname):
-        f = open(fname,'r')
+    def read_data_cpickle(self, fname):
+        f = open(fname, 'r')
         data = cPickle.load(f)
         f.close()
         return data
@@ -775,7 +774,7 @@ class CombinatorialLibrary:
     def read_pssm_comblib(self, lib_source):
         'Reads in all available pssms derived from combinatorial libraries.'
         factor = 1.0 # This will be multipled to all matrix elements.
-        fname_sidney2008 = os.path.join(self.path_data,'comblib_sidney2008','dic_pssm_sidney2008.cPickle')
+        fname_sidney2008 = os.path.join(self.path_data, 'comblib_sidney2008', 'dic_pssm_sidney2008.cPickle')
 #         fname_udaka2000 = os.path.join(self.path_data,'comblib_udaka2000','dic_pssm_udaka2000.cPickle')
         dic_pssm_sidney2008 = self.read_data_cpickle(fname_sidney2008)
 #         dic_pssm_udaka2000 = self.read_data_cpickle(fname_udaka2000)
@@ -787,7 +786,7 @@ class CombinatorialLibrary:
 #             factor = 1.0
 #             dic_pssm = dic_pssm_udaka2000
 
-        key_list = dic_pssm.keys()
+        key_list = list(dic_pssm.keys())
         for key in key_list:
             w = dic_pssm[key]
             w = [factor*val for val in w]
@@ -810,14 +809,14 @@ class CombinatorialLibrary:
         return (dic_mat, offset)
 
     def pickle_dump(self, file_name):
-        fout = open(file_name,"wb")
+        fout = open(file_name, "wb")
         cPickle.dump(self.length, fout)
-        cPickle.dump(self.mat,fout)
-        cPickle.dump(self.offset,fout)
+        cPickle.dump(self.mat, fout)
+        cPickle.dump(self.offset, fout)
         fout.close()
 
     def pickle_load(self, file_name):
-        fin = open(file_name,"rb")
+        fin = open(file_name, "rb")
         self.length = cPickle.load(fin)
         self.mat = cPickle.load(fin)
         self.offset = cPickle.load(fin)
@@ -847,11 +846,11 @@ class ConsensusPredictor(object):
         self.available_method_list = self.predictor_selection.get_available_methods(mhc_length, self.method_name_list)
         self.predictor_list = [self.dic_predictor[method] for method in self.available_method_list] # Get only those predictors for which (mhc,length) is available.
         # [] Build a list of predictors based on this set.
-        [predictor.initialize(mhc,length) for predictor in self.predictor_list]
+        [predictor.initialize(mhc, length) for predictor in self.predictor_list]
 
     def read_score_distributions(self):
         fname = os.path.join(self.path_data, 'consensus', 'distribution_consensus_bin.cpickle')
-        f=open(fname,'r')
+        f=open(fname, 'r')
         dic = cPickle.load(f)
         f.close()
         return dic
@@ -867,18 +866,18 @@ class ConsensusPredictor(object):
         scores_predictor = [] # Lower the score, the better.
         ic50scores = []
         for (predictor, method_name) in zip(self.predictor_list, self.available_method_list):
-            self.mhc = self.mhc.replace("*","")
+            self.mhc = self.mhc.replace("*", "")
             key = (method_name, self.mhc, self.length)
             score_distribution = self.dic_score_distributions[key]
             
             if method_name == 'smm' or method_name == 'ann' or method_name == 'comblib_sidney2008':
-                spercentile = predictor.predict_sequence(sequence,pred,peptideList)
+                spercentile = predictor.predict_sequence(sequence, pred, peptideList)
                 scores = tuple([sp[0] for sp in spercentile])
                 percentile = tuple([sp[1] for sp in spercentile])
                 ic50scores.append(scores)
                 scores_predictor.append(percentile)
             else:
-                scores = predictor.predict_sequence(sequence,pred,peptideList)
+                scores = predictor.predict_sequence(sequence, pred, peptideList)
                 ic50scores.append(scores)
                 # here scores = individual scores for each of the methods
                 scores_percentile = [self.get_percentile_score(score, score_distribution) for score in scores]  #range = [0....100]
@@ -893,7 +892,7 @@ class ConsensusPredictor(object):
         if pred == 'submit_processing':
             return tuple(scores_consensus)
         else:
-            ic50_ranks = zip(ic50scores, scores_predictor)
+            ic50_ranks = list(zip(ic50scores, scores_predictor))
             return tuple(scores_consensus), ic50_ranks    #ic50scores
         
     def search(self, a, x):
@@ -989,7 +988,7 @@ class PercentileScore:
     def read_score_distributions(self):
         _fname = 'netmhcpan_2_8' if self.method == 'netmhcpan' else self.method
         fname = os.path.join(self.path_data, self.method, 'distribution_{0}_bin.cpickle'.format(_fname))
-        f=open(fname,'r')
+        f=open(fname, 'r')
         dic = cPickle.load(f)
         f.close()
         return dic
@@ -1070,9 +1069,9 @@ class MHCBindingPredictions:
                 scores = []
                 if not peptideList:
                     for sequence in sequence_list:
-                        scores.append(predictor.predict_sequence(sequence,pred))
+                        scores.append(predictor.predict_sequence(sequence, pred))
                 else:
-                    scores.append(predictor.predict_sequence(sequence_list,pred,peptideList))
+                    scores.append(predictor.predict_sequence(sequence_list, pred, peptideList))
                 results.append((length, allele, scores, method_name))
         else:
             
@@ -1100,9 +1099,9 @@ class MHCBindingPredictions:
                     scores = []
                     if not peptideList:
                         for sequence in sequence_list:
-                            scores.append(predictor.predict_sequence(sequence,pred))
+                            scores.append(predictor.predict_sequence(sequence, pred))
                     else:
-                        scores.append(predictor.predict_sequence(sequence_list,pred,peptideList))
+                        scores.append(predictor.predict_sequence(sequence_list, pred, peptideList))
                     results.append((length, allele, scores, method_name))
             else:
                 '''
@@ -1117,9 +1116,9 @@ class MHCBindingPredictions:
                 scores = []
                 if not peptideList:
                     for sequence in sequence_list:
-                        scores.append(predictor.predict_sequence(sequence,pred))
+                        scores.append(predictor.predict_sequence(sequence, pred))
                 else:
-                    scores.append(predictor.predict_sequence(sequence_list,pred,peptideList))
+                    scores.append(predictor.predict_sequence(sequence_list, pred, peptideList))
                 results.append((int(length), mhc, scores, method_name))
         return results
      
@@ -1135,7 +1134,7 @@ class MHCBindingPredictions:
             where a.method_id = m.id and a.name = ? and a.length = ? and \
             a.method_id != ? and a.method_id != ? and a.method_id != ? and a.method_id != ? and a.method_id != ? and a.method_id != ?", (allele, length, 1, 2, 5, 8, 9, 10))
             rows = cur.fetchall()
-            methods = list(sum(rows,()))
+            methods = list(sum(rows, ()))
             if len(methods) > 1 and 'netmhcpan' in methods:
                 methods.remove('netmhcpan')
             method_list.extend(methods)

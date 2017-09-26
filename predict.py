@@ -6,16 +6,16 @@ import parmap
 import logging
 import sys
 
-import iedb_src.predict_binding as iedb_predict
+from .iedb_src import predict_binding as iedb_predict
 
 __all__ = ['iedbPredict']
 
 def convertHLAToIEDB(h):
     """Takes format A*1234 or A_1234 and returns A*12:34"""
-    return 'HLA-' + h[:4].replace('_','*') + ':' + h[4:]
+    return 'HLA-' + h[:4].replace('_', '*') + ':' + h[4:]
 def convertHLABack(h):
     """Takes format HLA-A*12:34 and returns A_1234"""
-    return h[4:].replace('*','_').replace(':','')
+    return h[4:].replace('*', '_').replace(':', '')
 
 def iedbPredict(method, hlas, peptides, cpus=1, verbose=False):
     """Generate HLA:peptide binding affinity (log-IC50) predictions using
@@ -46,11 +46,11 @@ def iedbPredict(method, hlas, peptides, cpus=1, verbose=False):
         logging.info('HLA prediction initialized for %d HLA allele(s) using method %s on %d CPU(s)', len(hlas), method, cpus)
 
 
-    cols = ['method','hla','peptide','core','pred']
+    cols = ['method', 'hla', 'peptide', 'core', 'pred']
     
     if method == 'RAND':
         results = dict(method=[], hla=[], peptide=[], core=[], pred=[])
-        for h,pep in itertools.product(hlas,peptides):
+        for h, pep in itertools.product(hlas, peptides):
             results['method'].append('RAND')
             results['hla'].append(h)
             results['peptide'].append(pep)
@@ -76,7 +76,7 @@ def iedbPredict(method, hlas, peptides, cpus=1, verbose=False):
 
 
 def _predictOneHLA(h, method, peptides, verbose):
-    cols = ['method','hla','peptide','core','pred']
+    cols = ['method', 'hla', 'peptide', 'core', 'pred']
     try:
         resDf = iedb_predict.Prediction().predict(method, convertHLAToIEDB(h), peptides)
         resDf['hla'] = resDf.allele.map(convertHLABack)

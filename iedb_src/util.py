@@ -1,7 +1,7 @@
 import os
-import cPickle, re
+import pickle, re
 
-from setupinfo import * #@UnusedWildImport
+from .setupinfo import * #@UnusedWildImport
 
 class InputError(Exception):
     """Exception raised for errors in the input."""
@@ -185,7 +185,7 @@ class PredictorSelectionB(object):
         dic_model_list = {}
         for method in method_list:
             fname = os.path.join(self.path_data, method, 'model_list.txt')
-            f=open(fname,'r')
+            f=open(fname, 'r')
             lines=f.readlines()
             model_list = [line.split('\t')[0].strip() for line in lines]
             f.close()
@@ -206,11 +206,11 @@ class PredictorSelectionB(object):
             raise UnexpectedInputError("Selected prediction method '%s' does not exist." % (self.pred_method))
         
         
-        processing_netmhcpan = [8,9,10,11,12,13,14]
+        processing_netmhcpan = [8, 9, 10, 11, 12, 13, 14]
         
         model_list = self.dic_model_list[self.pred_method] # A list of (MHC, length)
         for mhc_length in model_list:
-            (mhc,length) = get_standard_mhc_name(mhc_length)
+            (mhc, length) = get_standard_mhc_name(mhc_length)
             species = get_species(mhc) #added
             if (self.species == species):
                 if ((self.mhc == mhc) or (self.mhc == mhc_all)):
@@ -241,7 +241,7 @@ class PredictorSelectionB(object):
         '''Returns a list of models such that at least one of the method in method_list is available.'''
         # Output: model_name, method_list_subset
         model_list = []  # In the format of a list of HLA-A-0201-9, etc.
-        key_list = self.dic_model_list.keys()
+        key_list = list(self.dic_model_list.keys())
         for method in key_list:
             model_list_temp = self.dic_model_list[method]
             model_list = model_list + model_list_temp
@@ -327,7 +327,7 @@ class MethodSet(object):
 
 def get_path_model(path_data, mhc, length):
     '''Used by ARB, SMM to read appropriate files containing trained models.'''
-    model_name = mhc.replace('*','-').replace(' ','-').replace(':','') + '-' + str(length)
+    model_name = mhc.replace('*', '-').replace(' ', '-').replace(':', '') + '-' + str(length)
     path_model = os.path.join(path_data, model_name) + '.cpickle'  # HLA-A-0201-9
     return path_model
 
@@ -376,17 +376,17 @@ def get_standard_mhc_name(mhc_temp):
     return (mhc, length)
 
 def get_standard_mhc_name_b(mhc):
-    mhc = mhc.replace('HLA-A-','HLA A*')
-    mhc = mhc.replace('HLA-B-','HLA B*')
-    mhc = mhc.replace('HLA-C-','HLA C*')
-    mhc = mhc.replace('HLA-E-','HLA E*')
-    mhc = mhc.replace('HLA-G-','HLA G*')
-    mhc = mhc.replace('H-2-','H-2 ')
-    mhc = mhc.replace('Mamu-A-','Mamu A*')
-    mhc = mhc.replace('Mamu-B-','Mamu B*')
-    mhc = mhc.replace('Patr-A-','Patr A*')
-    mhc = mhc.replace('Patr-B-','Patr B*')
-    mhc = mhc.replace('Gogo-B-','Gogo B*')
+    mhc = mhc.replace('HLA-A-', 'HLA A*')
+    mhc = mhc.replace('HLA-B-', 'HLA B*')
+    mhc = mhc.replace('HLA-C-', 'HLA C*')
+    mhc = mhc.replace('HLA-E-', 'HLA E*')
+    mhc = mhc.replace('HLA-G-', 'HLA G*')
+    mhc = mhc.replace('H-2-', 'H-2 ')
+    mhc = mhc.replace('Mamu-A-', 'Mamu A*')
+    mhc = mhc.replace('Mamu-B-', 'Mamu B*')
+    mhc = mhc.replace('Patr-A-', 'Patr A*')
+    mhc = mhc.replace('Patr-B-', 'Patr B*')
+    mhc = mhc.replace('Gogo-B-', 'Gogo B*')
     return mhc
 
 def get_species_list():
@@ -424,8 +424,7 @@ def is_even(num):
         return False
 
 def median(v_temp):
-    v = [x for x in v_temp]
-    v.sort()
+    v = sorted([x for x in v_temp])
     value_median = None
     if (is_even(len(v)) == True):
         index_a = len(v)/2 - 1
@@ -440,29 +439,28 @@ def rankdata(v):
     # Rank starts from '1'
     # (value, its rank)
     # Those having same values get the average of their ranks.
-    index_list = range(1,len(v)+1)
-    v_a = [(x, index) for (x,index) in zip(v,index_list)]
-    v_a.sort() # This will sort based on 'x' instead of 'index'
-    v_rank = [(index, x, rank) for ((x,index), rank) in zip(v_a, index_list)]
+    index_list = list(range(1, len(v)+1))
+    v_a = sorted([(x, index) for (x, index) in zip(v, index_list)])
+    v_rank = [(index, x, rank) for ((x, index), rank) in zip(v_a, index_list)]
     # 'rank' values should be now averaged if corresponding values are the same.
     v_rank.sort()  # Return the items to the original order.
     dic={}
-    for (index,x,rank) in v_rank:
+    for (index, x, rank) in v_rank:
         key = x
-        if (dic.has_key(key) == False):
+        if ((key in dic) == False):
             dic[key] = [rank]
         else:
             temp = dic[key]
             temp.append(rank)
-    rank_list = [mean(dic.get(x)) for (index,x,rank) in v_rank]  # This averages ranks if their corresponding values are the same.
+    rank_list = [mean(dic.get(x)) for (index, x, rank) in v_rank]  # This averages ranks if their corresponding values are the same.
     return rank_list
 
 def read_available_model_list():
     '''For each method, a list of available (mhc,length) is provided.'''
     setupinfo = SetupInfo()
     fname =setupinfo.fname_tool_list
-    f=open(fname,'r')
-    model_list = cPickle.load(f)
+    f=open(fname, 'r')
+    model_list = pickle.load(f)
     f.close()
     return model_list
 
@@ -476,13 +474,13 @@ def read_available_model_list_b(version='20130222'):
     # The following block of code should be done in the very beginning of initialization of tools.
     dic_model_list={}
     for method in method_list:
-        fname = os.path.join(setupinfo.path_data, method,'model_list.txt')
-        f=open(fname,'r'); lines=f.readlines(); f.close()
-        model_list = [line.split('\t')[0].replace('_','-').strip() for line in lines] # Assumes now 'HLA-A-0201-9 form.
+        fname = os.path.join(setupinfo.path_data, method, 'model_list.txt')
+        f=open(fname, 'r'); lines=f.readlines(); f.close()
+        model_list = [line.split('\t')[0].replace('_', '-').strip() for line in lines] # Assumes now 'HLA-A-0201-9 form.
         dic_model_list[method] = model_list
 
     # Group based on species, mhc, lengths. Each length is associated with a list of available methods.
-    length_list = [8,9,10,11,12,13,14]
+    length_list = [8, 9, 10, 11, 12, 13, 14]
     species_list = get_species_list()
     model_list_all = []
     [model_list_all.extend(dic_model_list[method]) for method in method_list]
@@ -545,13 +543,12 @@ def list_mhc():
     tools_list.extend(tools_list_b)
     tools_list.extend(tools_list_c)
     temp = set(tools_list)
-    tools_list = list(temp)
-    tools_list.sort()
+    tools_list = sorted(temp)
 
-    print "MHC", "\t", "Peptide Length"
+    print("MHC", "\t", "Peptide Length")
     for row in tools_list:
         (species, mhc, peptidelength) = row
-        print mhc, "\t", peptidelength
+        print(mhc, "\t", peptidelength)
     return tools_list
 
 def shared_list_mhc():
@@ -562,12 +559,11 @@ def shared_list_mhc():
     aset = set(tools_list_a)
     bset = set(tools_list_b)
     cset = set(tools_list_c)
-    shared_list_mhc = list(aset.intersection(bset).intersection(cset))
-    shared_list_mhc.sort()
-    print "MHC", "\t", "Peptide Length"
+    shared_list_mhc = sorted(aset.intersection(bset).intersection(cset))
+    print("MHC", "\t", "Peptide Length")
     for row in shared_list_mhc:
         (species, mhc, peptidelength) = row
-        print mhc, "\t", peptidelength
+        print(mhc, "\t", peptidelength)
     return shared_list_mhc
 
 def test_predictor_selection():
@@ -578,10 +574,10 @@ def test_predictor_selection():
     mhc = 'HLA A*0201'
     length = '9'
 
-    method_list = ['ann','smm','comblib_sidney2008', 'netmhcpan']  # This is the predictors used to build 'consensus'
+    method_list = ['ann', 'smm', 'comblib_sidney2008', 'netmhcpan']  # This is the predictors used to build 'consensus'
     psb = PredictorSelectionB(path_data, pred_method, species, mhc, length)
     model_list = psb.get_model_list_combined()
-    print 'debug model_list ', len(model_list)
+    print('debug model_list ', len(model_list))
     content = []
     for name in model_list:
         method_list_available = psb.get_available_methods(name, method_list)
@@ -589,7 +585,7 @@ def test_predictor_selection():
         content.append(line)
     content.sort()
     for line in content:
-        print line
+        print(line)
 
 if __name__ == '__main__':
     test_predictor_selection()

@@ -30,7 +30,7 @@ def convertHLAAsterisk(hlas):
 
 def isvalidmer(mer):
     if not mer is None:
-        return not re.search('[%s]' % BADAA,mer)
+        return not re.search('[%s]' % BADAA, mer)
     else:
         return False
 
@@ -40,7 +40,7 @@ def isvalidHLA(h, loci='AB'):
     else:
         return False
 
-def rankEpitopes(ba, hlaList, peptide, nmer = [8,9,10,11], peptideLength = None):
+def rankEpitopes(ba, hlaList, peptide, nmer = [8, 9, 10, 11], peptideLength = None):
     """Breaks peptide into kmers (all nmer lengths)
     and rank all (hla, kmer) pairs by predicted IC50 in hlaPredCache ba
 
@@ -78,25 +78,25 @@ def rankEpitopes(ba, hlaList, peptide, nmer = [8,9,10,11], peptideLength = None)
         Array of HLA alleles that were the best predicted binder to each kmer"""
 
     merList = getMers(peptide, nmer, peptideLength)
-    kmers = np.empty((len(merList),len(hlaList)), dtype=object)
-    ic50 = np.ones((len(merList),len(hlaList))) * 15
-    hla = np.empty((len(merList),len(hlaList)), dtype=object)
-    for i,m in enumerate(merList):
-        for j,h in enumerate(hlaList):
-            kmers[i,j] = m
-            hla[i,j] = h
-            tmp = ba[(h,m)]
+    kmers = np.empty((len(merList), len(hlaList)), dtype=object)
+    ic50 = np.ones((len(merList), len(hlaList))) * 15
+    hla = np.empty((len(merList), len(hlaList)), dtype=object)
+    for i, m in enumerate(merList):
+        for j, h in enumerate(hlaList):
+            kmers[i, j] = m
+            hla[i, j] = h
+            tmp = ba[(h, m)]
             if not np.isnan(tmp):
-                ic50[i,j] = tmp
+                ic50[i, j] = tmp
     kmers = kmers.flatten()
     ic50 = ic50.flatten()
     hla = hla.flatten()
     sorti = ic50.argsort()
     ranks = np.empty(len(ic50), int)
     ranks[sorti] = np.arange(len(ic50))
-    return (ranks,sorti,kmers,ic50,hla)
+    return (ranks, sorti, kmers, ic50, hla)
 
-def rankKmers(ba, hlaList, peptide, nmer=[8,9,10,11], peptideLength=None):
+def rankKmers(ba, hlaList, peptide, nmer=[8, 9, 10, 11], peptideLength=None):
     """Breaks peptide into kmers (all nmer lengths)
     and rank all (hla, kmer) pairs by predicted IC50 in hlaPredCache ba
 
@@ -134,7 +134,7 @@ def rankKmers(ba, hlaList, peptide, nmer=[8,9,10,11], peptideLength=None):
         Array of HLA alleles that were the best predicted binder to each kmer"""
     kmers = getMers(peptide, nmer, peptideLength)
     result = rankMers(ba, hlaList, kmers)
-    return (result[0],result[1],kmers,result[2],result[3])
+    return (result[0], result[1], kmers, result[2], result[3])
     
 def rankMers(ba, hlaList, merList):
     """Ranks all (hla, mer) pairs by predicted IC50 found in hlaPredCache, ba
@@ -167,15 +167,15 @@ def rankMers(ba, hlaList, merList):
 
     ic50 = np.ones((len(merList))) * 15
     hla = np.empty(len(merList), dtype=object)
-    for i,m in enumerate(merList):
+    for i, m in enumerate(merList):
         if not '.' in m:
-            ic50[i],hla[i] = getIC50(ba, hlaList, m, returnHLA=True)
+            ic50[i], hla[i] = getIC50(ba, hlaList, m, returnHLA=True)
     sorti = ic50.argsort()
     ranks = np.empty(len(ic50), dtype=int)
     ranks[sorti] = np.arange(len(ic50))
-    return (ranks,sorti,ic50,hla)
+    return (ranks, sorti, ic50, hla)
 
-def getIC50(ba, hlaList, mer, nmer=[8,9,10,11], returnHLA=False):
+def getIC50(ba, hlaList, mer, nmer=[8, 9, 10, 11], returnHLA=False):
     """Return the IC50 from ba of the mer and its affinity with the most avid HLA in hlaList.
     Or if len(pep)>11, return that of the most avid kmer
 
@@ -204,11 +204,11 @@ def getIC50(ba, hlaList, mer, nmer=[8,9,10,11], returnHLA=False):
     
     if len(mer) <= 11:
         """Minimum IC50 over the HLAs"""
-        ic50s = np.asarray([ba[(h,mer)] for h in hlaList])
+        ic50s = np.asarray([ba[(h, mer)] for h in hlaList])
         hlas = hlaList
     else:
         """Minimum IC50 over all the mers and all the HLAs"""
-        pairs = [getIC50(ba,hlaList,m, returnHLA=True) for m in getMers(mer,nmer)]
+        pairs = [getIC50(ba, hlaList, m, returnHLA=True) for m in getMers(mer, nmer)]
         ic50s = np.asarray([p[0] for p in pairs])
         hlas = [p[1] for p in pairs]
 
@@ -218,7 +218,7 @@ def getIC50(ba, hlaList, mer, nmer=[8,9,10,11], returnHLA=False):
     else:
         return ic50s[mini]
 
-def getMers(seq, nmer=[8, 9 , 10, 11], seqLength=None):
+def getMers(seq, nmer=[8, 9, 10, 11], seqLength=None):
     """Takes a AA sequence (string) and turns it into a list of 8, 9, 10, 11 mers
     
     The seq will be padded with one or more '.' if it is shorter than seqLength
@@ -249,7 +249,7 @@ def getMers(seq, nmer=[8, 9 , 10, 11], seqLength=None):
         mers.extend([seq[i:i+n] for i in range(len(seq)-n+1)])
     return mers
 
-def getMerInds(seq, nmer=[8, 9 , 10, 11], seqLength=None):
+def getMerInds(seq, nmer=[8, 9, 10, 11], seqLength=None):
     """Takes a AA sequence (string) and turns it into a list of 8, 9, 10, 11 mers
     
     The seq will be padded with one or more '.' if it is shorter than seqLength
@@ -282,7 +282,7 @@ def getMerInds(seq, nmer=[8, 9 , 10, 11], seqLength=None):
     for n in nmer:
         mers.extend([seq[i:i+n] for i in range(len(seq)-n+1)])
         inds.extend([np.arange(n)+i for i in range(len(seq)-n+1)])
-    return mers,inds
+    return mers, inds
 
 def itermer(seq, k=9, gapped=True, yield_inds=False):
     """Generator over all k-mers in seq.
@@ -311,18 +311,18 @@ def itermer(seq, k=9, gapped=True, yield_inds=False):
         An array of indices for the mer"""
 
     for i in range(len(seq) - k + 1):
-        g,ng = grabKmer(seq, i, k=k)
+        g, ng = grabKmer(seq, i, k=k)
         if gapped:
             mer = g
         else:
             mer = ng
         if yield_inds:
-            ginds,nginds = grabKmerInds(seq, i, k=k)
+            ginds, nginds = grabKmerInds(seq, i, k=k)
             if gapped:
                 inds = ginds
             else:
                 inds = nginds
-            yield (mer,inds)
+            yield (mer, inds)
         else:
             yield (mer,)
 
@@ -351,25 +351,25 @@ def grabKmer(seq, starti, k=9):
         If seq[starti] is a gap then returns None.
         If not then all gaps are removed before taking the k-length peptide
             (if there aren't k AAs then return is None)"""
-    if not isinstance(starti,int):
+    if not isinstance(starti, int):
         starti = int(starti)
 
     if (starti+k-1) <= (len(seq)-1) and starti >= 0:
         tmp = seq[starti:]
         full = tmp[:k]
         if full[0] == '-':
-            return None,None
+            return None, None
         elif '-' in full:
-            ng = tmp.replace('-','')
+            ng = tmp.replace('-', '')
             if len(ng) >= k:
                 ng = ng[:k]
             else:
                 ng = None
         else:
             ng = full
-        return full,ng
+        return full, ng
     else:
-        return None,None
+        return None, None
 
 def grabKmerInds(seq, starti, k=9):
     """Grab the kmer from seq starting at position starti with length k
@@ -398,15 +398,15 @@ def grabKmerInds(seq, starti, k=9):
         If seq[starti] is a gap then returns an empty array.
         If not then all gaps are removed before taking the k-length peptide
             (if there aren't k AAs then return is an empty array)"""
-    if not isinstance(starti,int):
+    if not isinstance(starti, int):
         starti = int(starti)
 
     if (starti+k-1) <= (len(seq)-1) and starti >= 0:
-        tmp = np.arange(starti,len(seq))
+        tmp = np.arange(starti, len(seq))
         full = tmp[:k]
         """If it starts with a gap then it is invalid (arbitary rule)"""
         if seq[starti] == '-':
-            return np.empty(0),np.empty(0)
+            return np.empty(0), np.empty(0)
         elif '-' in seq[starti:starti+k]:
             """If there's a gap somewhere else then go through one by one adding non-gapped indices"""
             ng = []
@@ -417,13 +417,13 @@ def grabKmerInds(seq, starti, k=9):
                 if len(ng) == k:
                     return full, np.array(ng)
             """If we get to then end of the seq then return ng=None"""
-            return full,np.empty(0)
+            return full, np.empty(0)
         else:
             """If there are no gaps anywhere then just return k indices starting with starti"""
-            return full,full
+            return full, full
     else:
         """If its an invalid request then return None,None"""
-        return np.empty(0),np.empty(0)
+        return np.empty(0), np.empty(0)
 
 def findpeptide(pep, seq, returnEnd = False):
     """Find pep in seq ignoring gaps but returning a start position that counts gaps
@@ -444,7 +444,7 @@ def findpeptide(pep, seq, returnEnd = False):
     startPos : int
         Start position (zero-indexed) of pep in seq or -1 if not found"""
 
-    ng = seq.replace('-','')
+    ng = seq.replace('-', '')
     ngInd = ng.find(pep)
     ngCount = 0
     pos = 0
@@ -465,7 +465,7 @@ def findpeptide(pep, seq, returnEnd = False):
                 if not seq[endPos] == '-':
                     count += 1
                 endPos += 1
-        return startPos,endPos
+        return startPos, endPos
     else:
         return startPos
 
@@ -501,14 +501,14 @@ def grabOverlappingKmer(seq, sitei, pos=0, k=9):
     aaRight = k - pos
     aaLeft = pos
     if seq[sitei] == '-':
-        return None,None
+        return None, None
 
     if (sitei + aaRight) <= len(seq) and (sitei - aaLeft) >= 0:
         if pos<k:
             rh = seq[sitei:]
             fullRH = rh[:aaRight]
             if '-' in fullRH:
-                ngRH = rh.replace('-','')
+                ngRH = rh.replace('-', '')
                 if len(ngRH) >= aaRight:
                     ngRH = ngRH[:aaRight]
                 else:
@@ -523,7 +523,7 @@ def grabOverlappingKmer(seq, sitei, pos=0, k=9):
             lh = seq[:sitei]
             fullLH = lh[-aaLeft:]
             if '-' in fullLH:
-                ngLH = lh.replace('-','')
+                ngLH = lh.replace('-', '')
                 if len(ngLH) >= aaLeft:
                     ngLH = ngLH[-aaLeft:]
                 else:
@@ -540,9 +540,9 @@ def grabOverlappingKmer(seq, sitei, pos=0, k=9):
             ng = None
         else:
             ng = ngLH + ngRH
-        return full,ng
+        return full, ng
     else:
-        return None,None
+        return None, None
 
 
 def overlappingMers(seq, sitei, nmer = [8, 9, 10, 11], padding = 0):
@@ -578,17 +578,17 @@ def overlappingMers(seq, sitei, nmer = [8, 9, 10, 11], padding = 0):
                     mers.append(ng)
                     starti.append(sitei-posi)
                     #print sitei, posi, k, ng
-        mers,uniqi = np.unique(mers,return_index = True)
+        mers, uniqi = np.unique(mers, return_index = True)
         starti = np.array(starti)[uniqi]
         return mers, starti
 
-    mers,starti = _overlappingMersNoPadding(seq, sitei, nmer = nmer)
+    mers, starti = _overlappingMersNoPadding(seq, sitei, nmer = nmer)
     if padding > 0:
         for padi in (np.arange(padding) + 1):
             for tmpSitei in [sitei+padi, sitei-padi]:
                 tmpMers, tmpStarti = _overlappingMersNoPadding(seq, tmpSitei, nmer)
-                mers = np.concatenate((mers,tmpMers))
-                starti = np.concatenate((starti,tmpStarti))
-    mers,uniqi = np.unique(mers,return_index = True)
+                mers = np.concatenate((mers, tmpMers))
+                starti = np.concatenate((starti, tmpStarti))
+    mers, uniqi = np.unique(mers, return_index = True)
     starti = np.array(starti)[uniqi]
-    return mers,starti
+    return mers, starti

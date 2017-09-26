@@ -3,11 +3,12 @@
 import sys
 from optparse import OptionParser
 
-from util import * #@UnusedWildImport
-from seqpredictor import MHCBindingPredictions
-from setupinfo import * #@UnusedWildImport
+from .util import * #@UnusedWildImport
+from .seqpredictor import MHCBindingPredictions
+from .setupinfo import * #@UnusedWildImport
 
 import pandas as pd
+from functools import reduce
 
 __all__ = ['Prediction']
 
@@ -28,33 +29,33 @@ class Prediction():
     
     def insert_dash(self, method_list, score_list):
         scores = []
-        dash = "-","-"
+        dash = "-", "-"
         for score in score_list:
             score = list(score)
             if "smm" in method_list and not "ann" in method_list:
-                score.insert(1,dash)
-                score.insert(4,dash)
-                score.insert(5,dash)
+                score.insert(1, dash)
+                score.insert(4, dash)
+                score.insert(5, dash)
             if "ann" in method_list and "smm" in method_list and "comblib_sidney2008" in method_list:
                 score.append(dash)
             if "comblib_sidney2008" in method_list and not "ann" in method_list and not "smm" in method_list:
-                score.insert(1,dash)
-                score.insert(2,dash)
-                score.insert(5,dash)
+                score.insert(1, dash)
+                score.insert(2, dash)
+                score.insert(5, dash)
             if "ann" in method_list and "smm" in method_list and not "comblib_sidney2008" in method_list:
-                score.insert(5,dash)
-                score.insert(6,dash)
+                score.insert(5, dash)
+                score.insert(6, dash)
             if "ann" in method_list and not "smm" in method_list and not "comblib_sidney2008" in method_list:
-                score.insert(5,dash)
-                score.insert(6,dash)
-                score.insert(7,dash)
+                score.insert(5, dash)
+                score.insert(6, dash)
+                score.insert(7, dash)
             if "netmhcpan" in method_list and not "smm" in method_list and not "ann" in method_list:
-                score.insert(1,dash)
-                score.insert(2,dash)
-                score.insert(3,dash)
+                score.insert(1, dash)
+                score.insert(2, dash)
+                score.insert(3, dash)
             scores.append(tuple(self.flatten(score)))
         return scores
-    def predict(self, method,allele,peptides):
+    def predict(self, method, allele, peptides):
         """Predict MHC I binding affinity for all allele:peptide pairs using method.
 
         Length is detected using the first peptide in the list.
@@ -80,10 +81,10 @@ class Prediction():
 
         length = "%d" % len(peptides[0])
 
-        df = self._predict(method,allele,length,peptides,peptideList = True)
+        df = self._predict(method, allele, length, peptides, peptideList = True)
         return df
 
-    def _predict(self,method,allele,length,proteins,peptideList):
+    def _predict(self, method, allele, length, proteins, peptideList):
         species = get_species(allele)
         allele = allele.split()
         length = length.split()
@@ -111,18 +112,18 @@ class Prediction():
         
         # headers for different methods
         if method == 'IEDB_recommended':
-            header = ('allele','seq_num','start','end','length','peptide','method',mhc_predictor.get_score_unit(),'ann_ic50','ann_rank','smm_ic50','smm_rank','comblib_sidney2008_score','comblib_sidney2008_rank','netmhcpan_ic50','netmhcpan_rank')
+            header = ('allele', 'seq_num', 'start', 'end', 'length', 'peptide', 'method', mhc_predictor.get_score_unit(), 'ann_ic50', 'ann_rank', 'smm_ic50', 'smm_rank', 'comblib_sidney2008_score', 'comblib_sidney2008_rank', 'netmhcpan_ic50', 'netmhcpan_rank')
         elif method == 'consensus':
-            header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'ann_ic50','ann_rank','smm_ic50','smm_rank','comblib_sidney2008_score','comblib_sidney2008_rank')
+            header = ('allele', 'seq_num', 'start', 'end', 'length', 'peptide', mhc_predictor.get_score_unit(), 'ann_ic50', 'ann_rank', 'smm_ic50', 'smm_rank', 'comblib_sidney2008_score', 'comblib_sidney2008_rank')
         else:
-            header = ('allele','seq_num','start','end','length','peptide',mhc_predictor.get_score_unit(),'rank')
+            header = ('allele', 'seq_num', 'start', 'end', 'length', 'peptide', mhc_predictor.get_score_unit(), 'rank')
 
         d = {h:[] for h in header}
         for row in table_rows:
-            for h,v in zip(header,row):
+            for h, v in zip(header, row):
                 d[h].append(v)
         L = len(d['allele'])
-        d = {h:v for h,v in d.items() if len(v)==L}
+        d = {h:v for h, v in list(d.items()) if len(v)==L}
         cols = [h for h in header if h in d]
         return pd.DataFrame(d)[cols]
 
@@ -135,7 +136,7 @@ class Prediction():
             with open(fname, 'r') as fh:
                 proteins = [p.strip() for p in fh.readlines()]
 
-        print self._predict(method,allele,length,proteins,peptideList).to_string()
+        print(self._predict(method, allele, length, proteins, peptideList).to_string())
         
     def modify(self, lst):
         return[tuple(self.flatten(x)) for x in lst]
@@ -153,14 +154,14 @@ class Prediction():
                 score_list = []
                 for s in score:
                     ranks_scores = reduce(lambda x, y: x + y, s[1])
-                    scores = zip(s[0], zip(*ranks_scores))
+                    scores = list(zip(s[0], list(zip(*ranks_scores))))
                     scores = self.insert_dash(method_list, self.modify(scores))
                     score_list.append(scores)
                 self.add_rows_binding(allele, length, proteins, score_list, method_list, cutoff, value, peptideList)
             elif method == 'IEDB_recommended' and method_list == 'netmhcpan':
                 score_list = []
                 for s in score:
-                    scores = zip(s[0], zip(*s[1]))
+                    scores = list(zip(s[0], list(zip(*s[1]))))
                     scores = self.cons_netmhcpan(scores)
                     scores = self.insert_dash(method_list, self.modify(scores))
                     score_list.append(scores)
@@ -172,20 +173,20 @@ class Prediction():
     
     def add_rows_binding(self, allele, length, proteins, score_list, method_list, cutoff, value, peptideList):
         if not peptideList:
-            for (i,(sequence, predictions)) in enumerate(zip(proteins.input_protein.sequences, score_list)):
+            for (i, (sequence, predictions)) in enumerate(zip(proteins.input_protein.sequences, score_list)):
                 for (k, prediction) in enumerate(predictions):
                     sequence_source = "%s" %(i+1)
                     sequence_start = "%s" %(k + 1)
                     sequence_end = "%s" %(k + int(length))
                     scanned_sequence = sequence[k : k + length]
-                    self.row_data.append((allele, sequence_source, sequence_start, sequence_end, length, scanned_sequence, prediction, method_list.replace(",","-")))
+                    self.row_data.append((allele, sequence_source, sequence_start, sequence_end, length, scanned_sequence, prediction, method_list.replace(",", "-")))
         else:
-            for (k,(sequence, prediction)) in enumerate(zip(proteins, score_list[0])):
+            for (k, (sequence, prediction)) in enumerate(zip(proteins, score_list[0])):
                 sequence_source = "%s" %(k+1)
                 sequence_start = "1"
                 sequence_end = "%s" %(int(length))
                 scanned_sequence = sequence
-                self.row_data.append((allele, sequence_source, sequence_start, sequence_end, length, scanned_sequence, prediction, method_list.replace(",","-")))
+                self.row_data.append((allele, sequence_source, sequence_start, sequence_end, length, scanned_sequence, prediction, method_list.replace(",", "-")))
     
     def cons_netmhcpan(self, scores):
         score_list = []
@@ -206,7 +207,7 @@ class Prediction():
                 if '-' not in lis[-1]:
                     lis.insert(6, lis[-1])
                 else:
-                    lis.insert(6, "Consensus ("+lis[-1].replace("-","/")+")")
+                    lis.insert(6, "Consensus ("+lis[-1].replace("-", "/")+")")
                 del lis[-1]
                 formated_data.append(tuple(lis))
             else: 
@@ -242,7 +243,7 @@ class Prediction():
         (results_peptide_length, results_allele, scores, method_used) = mhc_scores[0]
     
         header = ['allele', 'length', 'peptide', mhc_predictor.get_score_unit()]
-        print '\t'.join(header)
+        print('\t'.join(header))
         
         for seq_index in range(len(scores)):
             seq = proteins.sequences[seq_index]
@@ -250,7 +251,7 @@ class Prediction():
             seq_scores = scores[seq_index]
             for (peptide, score) in zip(peptide_list, seq_scores):
                 row = [mhc, length, peptide, score]
-                print '\t'.join(map(str,row))
+                print('\t'.join(map(str, row)))
 
 
     def query_yes_no(self, question, default="yes"):
@@ -282,64 +283,64 @@ class Prediction():
         method_index = ms.get_method_index(method)
         
         if method_index == 3:
-            print "'arb' has been removed from the list of available methods."
+            print("'arb' has been removed from the list of available methods.")
             sys.exit(1)
         
         mhc_list = get_mhc_list(method_index)
     
-        print "List of available (MHC,PeptideLength) for "+method
+        print("List of available (MHC,PeptideLength) for "+method)
         if method == 'netmhcpan' or method == 'IEDB_recommended':
             answer = self.query_yes_no("The list is very long. Do you still want to print it?")
             if answer == False:
                 exit
             else: 
-                print "Species", "\t", "MHC", "\t", "PeptideLength"
-                for (species,mhc, peptide_length) in mhc_list:
+                print("Species", "\t", "MHC", "\t", "PeptideLength")
+                for (species, mhc, peptide_length) in mhc_list:
                     if mhc is not None:
-                        print species, "\t", ""+mhc+"", "\t", peptide_length
+                        print(species, "\t", ""+mhc+"", "\t", peptide_length)
         else: 
-            print "Species", "\t", "MHC", "\t", "PeptideLength"
-            for (species,mhc, peptide_length) in mhc_list:
+            print("Species", "\t", "MHC", "\t", "PeptideLength")
+            for (species, mhc, peptide_length) in mhc_list:
                 if mhc is not None:
-                    print species, "\t", ""+mhc+"", "\t", peptide_length
+                    print(species, "\t", ""+mhc+"", "\t", peptide_length)
                 
     def commandline_method(self):
         '''Return all available prediction methods.'''
         ms = MethodSet()
         method_list = ms.get_method_list(version=self.version)
-        print "MHC-I prediction methods:"
-        print "-------------------------"
+        print("MHC-I prediction methods:")
+        print("-------------------------")
         for method in method_list:
-            print method
-        print
+            print(method)
+        print()
     
     def commandline_help(self):
-        print " _______________________________________________________________________________________________________________________"
-        print "|***********************************************************************************************************************|"
-        print "| * List all available commands.                                                                                        |"
-        print "| ./src/predict_binding.py                                                                                              |"
-        print "|_______________________________________________________________________________________________________________________|"
-        print "| * List all available MHC-I prediction methods.                                                                        |"
-        print "| ./src/predict_binding.py method                                                                                       |"
-        print "|_______________________________________________________________________________________________________________________|"
-        print "| * List all available (MHC,peptide_length) for a given method.                                                         |"
-        print "| ./src/predict_binding [method] mhc                                                                                    |"
-        print "| Example: ./src/predict_binding.py ann mhc                                                                             |"
-        print "|_______________________________________________________________________________________________________________________|"
-        print "| * Make predictions given a file containing a list of sequences.                                                       |"
-        print "| ./src/predict_binding [method] [mhc] [peptide_length] [input_file]                                                    |"
-        print "| Example: ./src/predict_binding.py ann HLA-A*02:01 9 ./examples/input_sequence.fasta                                   |"
-        print "|_______________________________________________________________________________________________________________________|"
-        print "| * Make predictions given a file containing a list of sequences AND user-provided MHC sequence.                        |"
-        print "| ** Only netmhcpan has this option.                                                                                    |"
-        print "| ./src/predict_binding [method] -m [input_file_mhc] [peptide_length] [input_file]                                      |"
-        print "| Example: ./src/predict_binding.py netmhcpan -m ./examples/protein_mhc_B0702.fasta 9 ./examples/input_sequence.fasta   |"
-        print "|_______________________________________________________________________________________________________________________|"
-        print "| * You may also redirect (pipe) the input file into the script.                                                        |"
-        print "| Examples:                                                                                                             |"                                                                     
-        print "| echo -e ./examples/input_sequence.fasta | ./src/predict_binding.py ann HLA-A*02:01 9                                  |"
-        print "| echo -e ./examples/input_sequence.fasta | ./src/predict_binding.py netmhcpan -m ./examples/protein_mhc_B0702.fasta 9  |"
-        print "|_______________________________________________________________________________________________________________________|"
+        print(" _______________________________________________________________________________________________________________________")
+        print("|***********************************************************************************************************************|")
+        print("| * List all available commands.                                                                                        |")
+        print("| ./src/predict_binding.py                                                                                              |")
+        print("|_______________________________________________________________________________________________________________________|")
+        print("| * List all available MHC-I prediction methods.                                                                        |")
+        print("| ./src/predict_binding.py method                                                                                       |")
+        print("|_______________________________________________________________________________________________________________________|")
+        print("| * List all available (MHC,peptide_length) for a given method.                                                         |")
+        print("| ./src/predict_binding [method] mhc                                                                                    |")
+        print("| Example: ./src/predict_binding.py ann mhc                                                                             |")
+        print("|_______________________________________________________________________________________________________________________|")
+        print("| * Make predictions given a file containing a list of sequences.                                                       |")
+        print("| ./src/predict_binding [method] [mhc] [peptide_length] [input_file]                                                    |")
+        print("| Example: ./src/predict_binding.py ann HLA-A*02:01 9 ./examples/input_sequence.fasta                                   |")
+        print("|_______________________________________________________________________________________________________________________|")
+        print("| * Make predictions given a file containing a list of sequences AND user-provided MHC sequence.                        |")
+        print("| ** Only netmhcpan has this option.                                                                                    |")
+        print("| ./src/predict_binding [method] -m [input_file_mhc] [peptide_length] [input_file]                                      |")
+        print("| Example: ./src/predict_binding.py netmhcpan -m ./examples/protein_mhc_B0702.fasta 9 ./examples/input_sequence.fasta   |")
+        print("|_______________________________________________________________________________________________________________________|")
+        print("| * You may also redirect (pipe) the input file into the script.                                                        |")
+        print("| Examples:                                                                                                             |")                                                                     
+        print("| echo -e ./examples/input_sequence.fasta | ./src/predict_binding.py ann HLA-A*02:01 9                                  |")
+        print("| echo -e ./examples/input_sequence.fasta | ./src/predict_binding.py netmhcpan -m ./examples/protein_mhc_B0702.fasta 9  |")
+        print("|_______________________________________________________________________________________________________________________|")
 
     def main(self):
         import select
@@ -372,8 +373,8 @@ Following are the available choices - \n\
             else: 
                 parser.error("incorrect number of arguments")
                 self.commandline_help()
-        except UnexpectedInputError,e:
-            print str(e)
+        except UnexpectedInputError as e:
+            print(str(e))
     def mymain(self):
         import argparse
         self.version = '20130222'
@@ -381,31 +382,31 @@ Following are the available choices - \n\
         parser = argparse.ArgumentParser(description='IEDB MHC-I binding prdiction tools.')
 
         parser.add_argument('--method', '-m', type=str,
-                           choices = ['ann', 'comblib_sidney2008', 'consensus', 'IEDB_recommended', 'netmhcpan', 'smm','smmpmbec', 'pickpocket', 'netmhccons'],
+                           choices = ['ann', 'comblib_sidney2008', 'consensus', 'IEDB_recommended', 'netmhcpan', 'smm', 'smmpmbec', 'pickpocket', 'netmhccons'],
                            help='method',
                            required=True)
 
-        parser.add_argument('--allele','-a', type=str,
+        parser.add_argument('--allele', '-a', type=str,
                            help='allele (use "list" to list available alleles for a given method)',
                            default='list')
 
         parser.add_argument('--filename_mhc', type=str,
                            help='file containing a single MHC sequence in fasta format')
 
-        parser.add_argument('--length','-L',metavar='L', type=str, default = "9", help='length of the peptides')
+        parser.add_argument('--length', '-L', metavar='L', type=str, default = "9", help='length of the peptides')
 
         parser.add_argument('--fname', '-f', help='file containg amino acid sequences')
 
-        parser.add_argument("--peptide_list","-p", default=False,help="input file contains a list of kmer peptides", action="store_true")
+        parser.add_argument("--peptide_list", "-p", default=False, help="input file contains a list of kmer peptides", action="store_true")
 
         args = parser.parse_args()
 
         if args.allele == 'list':
-            self.commandline_mhc((args.method,''))
+            self.commandline_mhc((args.method, ''))
         elif not args.filename_mhc is None:
-            self.commandline_input_mhc(args, (args.method,args.length,args.fname))  # args=[method, length, fname]
+            self.commandline_input_mhc(args, (args.method, args.length, args.fname))  # args=[method, length, fname]
         else:
-            self.commandline_input((args.method,args.allele,args.length,args.fname,args.peptide_list))  # args=[method, mhc, length, fname]
+            self.commandline_input((args.method, args.allele, args.length, args.fname, args.peptide_list))  # args=[method, mhc, length, fname]
 
 
 

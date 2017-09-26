@@ -2,8 +2,8 @@
 
 import os
 
-from setupinfo import *
-from seqpredictor import *
+from .setupinfo import *
+from .seqpredictor import *
 
 
 def test_netmhcpan():
@@ -18,7 +18,7 @@ def test_netmhcpan():
     predictor = NetMHCpanPredictor(path_method, path_data)
     predictor.initialize(mhc, length, input_protein_mhc=input_protein_mhc)
     scores = predictor.predict_sequence(sequence)
-    print scores[0:5]
+    print(scores[0:5])
     assert False  # Check (1) there are multiple scores, (2) they are all numbers.
 
 def test_netmhcpan_mhc():
@@ -37,7 +37,7 @@ def test_netmhcpan_mhc():
     predictor = NetMHCpanPredictor(path_method, path_data)
     predictor.initialize(mhc, length, input_protein_mhc=input_protein_mhc)
     scores = predictor.predict_sequence(sequence)
-    print scores[0:5]
+    print(scores[0:5])
     assert False
 
 
