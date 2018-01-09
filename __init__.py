@@ -9,7 +9,7 @@ from .cache import hlaPredCache, RandCache
 from .helpers import *
 from . import predict
 from .iedb_src import predict_binding as iedb_predict
-
+from .new_iedb_predict import *
 
 __all__ = ['predict',
            'helpers',
@@ -28,4 +28,7 @@ __all__ = ['predict',
             'grabKmerInds',
             'findpeptide',
             'grabOverlappingKmer',
-            'overlappingMers']
+            'overlappingMers'
+            'checkHLAs',
+            'iedbPepPredict',
+            'generateMersFromNT']
