@@ -82,6 +82,7 @@ def iedbPepPredict(hlas, peptides, method='netmhcpan', timeit=False):
     L = len(peptides[0])
 
     data = {'method':method,
+            'email_address':'agartland@gmail.com',
             'sequence_text':' '.join(peptides),
             'sequence_format':'auto',
             'allele': ','.join(hlas),

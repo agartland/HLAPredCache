@@ -80,7 +80,12 @@ if __name__ ==  '__main__':
     with open(args.pep, 'r') as fh:
         peptides = [p.strip() for p in fh]
 
-    predDf = generatePredictions(args.method, hlas, peptides, cpus=args.cpus, verbose=args.verbose)
+    results = []
+    lengths = sorted(list(set([len(p) for p in peptides])))
+    for L in lengths:
+        tmp = [p for p in peptides if len(p) == L]
+        results.append(generatePredictions(args.method, hlas, tmp, cpus=args.cpus, verbose=args.verbose))
+    predDf = pd.concat(results, axis=0)
     predDf.to_csv(args.out, index=False)
 
     if args.verbose:
