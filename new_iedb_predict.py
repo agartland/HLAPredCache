@@ -1,4 +1,7 @@
-import skbio
+try:
+    import skbio
+except ImportError:
+    pass
 import numpy as np
 import pandas as pd
 import time
