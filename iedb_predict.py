@@ -16,6 +16,7 @@ import parmap
 import sys
 import logging
 import numpy as np
+import mhctools
 
 sys.path.append('/home/agartlan/gitrepo/')
 from HLAPredCache.predict import iedbPredict
@@ -48,6 +49,19 @@ def predictHLA(h, method, peptides, verbose):
         logging.info('Completed binding prediction for %s with %d peptides', h, len(peptides))
     return outDf
 
+def predictHLA_mhctools(h, method, peptides, verbose):
+    try:
+        pred = mhctools.NetMHCpan4(alleles=[h], program_name='/fh/fast/gilbert_p/agartlan/gitrepo/iedb/mhc_i/method/netMHCpan-4.0/netMHCpan')
+        outDf = pred.predict_peptides(peptides).to_dataframe()
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        logging.warning('Prediction with allele %s generated exception %s: %s', h, exc_type, exc_value)
+        return None
+
+    if verbose:
+        logging.info('Completed binding prediction for %s with %d peptides', h, len(peptides))
+    return outDf
+
 def generatePredictions(method, hlas, peptides, cpus=1, verbose=False):
     """Does not work because peptides is also an iterator...."""
     if verbose:
@@ -56,16 +70,16 @@ def generatePredictions(method, hlas, peptides, cpus=1, verbose=False):
         logging.info('HLA prediction initialized for %d HLA allele(s) using method %s on %d CPU(s)', len(hlas), method, cpus)
 
     if cpus > 1:
-        result = parmap.map(predictHLA, hlas, method, peptides, verbose, pool=Pool(processes=cpus))
+        result = parmap.map(predictHLA_mhctools, hlas, method, peptides, verbose, pool=Pool(processes=cpus))
     else:
-        result = parmap.map(predictHLA, hlas, method, peptides, verbose, parallel=False)
+        result = parmap.map(predictHLA_mhctools, hlas, method, peptides, verbose, parallel=False)
 
     """Remove None's"""
     outDf = pd.concat([r for r in result if not r is None], axis=0)
 
     """Take the log of the prediction if neccessary."""
-    if outDf.pred.max() > 100:
-        outDf['pred'] = np.log(outDf.pred)
+    if outDf.affinity.max() > 100:
+        outDf.loc[:, 'pred'] = np.log(outDf.affinity)
 
     if verbose:
         logging.info('Completed %d predictions (expected %d)', outDf.shape[0], len(hlas) * len(peptides))

@@ -28,7 +28,7 @@ __all__ = ['predict',
             'grabKmerInds',
             'findpeptide',
             'grabOverlappingKmer',
-            'overlappingMers'
+            'overlappingMers',
             'checkHLAs',
             'iedbPepPredict',
             'generateMersFromNT']
