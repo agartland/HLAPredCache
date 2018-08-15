@@ -290,7 +290,7 @@ class NetMHCpanPredictor:
     # (1) /home/life/projects/iedb_tools_development/tools/netMHCpan-2.0/scratch  # This is defined in the netmhcpan script that came with the package.
     # (2) tool directory for netmhc. This is where files are being written by apache.
     def __init__(self, path_method, path_data, method_used=None):
-        self.path_executable = os.path.join(path_method, 'netMHCpan-2.8', 'netMHCpan')
+        self.path_executable = os.path.join(path_method, 'netMHCpan-4.0', 'netMHCpan')
         self.path_scratch = os.path.join(path_data, 'netmhcpan') # The user should have a write access to this directory.
         self.path_data = os.path.join(path_data) 
         self.method = method_used
@@ -436,12 +436,12 @@ class NetMHCpanPredictor:
             usermhcfile.write(usermhc)
             usermhcfile.close()
         # Added by AFG on Feb 16, 2017: not sure whythis was needed today, but it works now
-        tmpdirCMD = ' -tdir ' + os.path.join(self.path_scratch, 'tmp')        
+        tmpdirCMD = ' -tdir ' + os.path.join(self.path_scratch, 'tmp')
         if self.hla_seq is None:
-            cmd = self.path_executable + ' -p ' + infile.name + ' -ic50 -a ' + self.mhc + ' -l ' + str(self.length) + tmpdirCMD
+            cmd = self.path_executable + ' -p ' + infile.name + '-a ' + self.mhc + ' -l ' + str(self.length)
         else:
             cmd = self.path_executable + ' -p ' + infile.name  + ' -hlaseq ' + usermhcfile.name + ' -l ' + str(self.length) + tmpdirCMD
-        
+        print(cmd)
         f = os.popen(cmd)
         
         content = f.readlines()

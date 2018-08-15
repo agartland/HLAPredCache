@@ -15,16 +15,27 @@ class hlaPredCache(dict):
     TODO:
      (1) Improve handling of class I and class II epitopes (and core info)
      (2) Integrate better with the prediction requester above"""
-    def __init__(self, baseFn = None, kmers = [8, 9, 10, 11], warn = True, oldFile = False, useRand = False):
+    def __init__(self, baseFn=None, kmers=[8, 9, 10, 11], warn=True, oldFile=False, useRand=False, newFile=False):
         dict.__init__(self)
-        self.repAsteriskPattern = re.compile('\*')
+        self.repAsteriskPattern = re.compile(r'\*')
 
         if oldFile:
             columnNames = ['method', 'hla', 'peptide', 'ic50']
-            readCSVFunc = partial(pd.read_csv, names = columnNames, header = None)
+            readCSVFunc = partial(pd.read_csv, names=columnNames, header=None)
+        elif newFile:
+            columnNames = ['method', 'hla', 'peptide', 'ic50']
+            def _readfunc(fn):
+                tmp = pd.read_csv(fn, usecols=['peptide', 'allele', 'prediction_method_name', 'pred'])
+                tmp = tmp.rename({'prediction_method_name':'method', 'allele':'hla', 'pred':'ic50'}, axis=1)
+                tmp.loc[:, 'hla'] = tmp.hla.str.slice(4, None)
+                tmp.loc[:, 'hla'] = tmp.hla.map(partial(re.compile(r':').sub, ''))
+                return tmp
+            readCSVFunc = _readfunc
         else:
             columnNames = ['method', 'hla', 'peptide', 'core', 'ic50']
-            readCSVFunc = partial(pd.read_csv, names = columnNames, skiprows = 1)
+            readCSVFunc = partial(pd.read_csv, names=columnNames, skiprows=1)
+        
+
         if not baseFn is None:
             self.name = baseFn.split('.')[0]
             self.predictionMethod = baseFn.split('.')[-1]
@@ -38,7 +49,8 @@ class hlaPredCache(dict):
                     predDf['ic50'] = predDf.ic50.map(lambda s: s[1:].split(",")[0])
                     predDf['ic50'] = predDf.ic50.map(float64)
 
-                predDf['hla'] = predDf.hla.map(partial(re.sub, self.repAsteriskPattern, '_'))
+                # predDf['hla'] = predDf.hla.map(partial(re.sub, self.repAsteriskPattern, '_'))
+                predDf['hla'] = predDf.hla.map(partial(self.repAsteriskPattern.sub, '_'))
                 self.update({(h, p):v for h, p, v in zip(predDf['hla'], predDf['peptide'], predDf['ic50'])})
         else:
             self.predictionMethod = ''

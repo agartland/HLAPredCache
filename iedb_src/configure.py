@@ -49,7 +49,7 @@ class Configure(object):
     def netmhcpan(self):
         mainpath      = os.path.abspath('.')
         methodpath    = os.path.join(mainpath, 'method')
-        netmhcpanpath = os.path.join(methodpath, 'netMHCpan-2.8')
+        netmhcpanpath = os.path.join(methodpath, 'netMHCpan-4.0')
         scratchpath   = os.path.join(netmhcpanpath, 'scratch')
         
         if (os.path.exists(scratchpath) == False):
@@ -101,7 +101,7 @@ class Configure(object):
         mainpath      = os.path.abspath('.')
         methodpath    = os.path.join(mainpath, 'method')
         netmhcconspath = os.path.join(methodpath, 'netMHCcons-1.1')
-        netmhcpanpath = os.path.join(methodpath, 'netMHCpan-2.8/netMHCpan')
+        netmhcpanpath = os.path.join(methodpath, 'netMHCpan-4.0/netMHCpan')
         netmhcpath = os.path.join(methodpath, 'netMHC-3.4/netMHC')
         pickpocketpath = os.path.join(methodpath, 'pickpocket-1.1/PickPocket')
         scratchpath   = os.path.join(netmhcconspath, 'scratch')
